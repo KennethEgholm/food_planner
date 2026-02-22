@@ -250,7 +250,7 @@ const MealForm: React.FC<MealFormProps> = ({
 								/>
 							</div>
 
-							<div className="form-check mb-3">
+							<div className="form-check mb-3 text-start">
 								<input
 									className="form-check-input"
 									type="checkbox"
