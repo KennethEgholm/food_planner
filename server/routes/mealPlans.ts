@@ -1,14 +1,9 @@
 import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
-import { query } from "../db";
-import { getAuthenticatedClient } from "./auth"; // Helper to get oauth client
+import { prisma } from "../db";
+import { getAuthenticatedClient } from "./auth";
 
 const router = Router();
-
-interface MealPlan {
-	id: number;
-	name: string;
-}
 
 // Create a meal plan
 router.post("/", async (req: Request, res: Response) => {
@@ -17,15 +12,16 @@ router.post("/", async (req: Request, res: Response) => {
 		if (!name) {
 			return res.status(400).json("Meal Plan name is required");
 		}
-		const newPlan = await query(
-			"INSERT INTO meal_plans (name) VALUES ($1) RETURNING *",
-			[name],
-		);
-		res.json(newPlan.rows[0]);
-	} catch (err: any) {
-		console.error(err.message);
-		if (err.message.includes("UNIQUE constraint failed")) {
-			return res.status(409).json("Meal Plan name must be unique");
+		const newPlan = await prisma.meal_plans.create({
+			data: { name },
+		});
+		res.json(newPlan);
+	} catch (err: unknown) {
+		if (err instanceof Error) {
+			console.error(err.message);
+			if ((err as any).code === "P2002") {
+				return res.status(409).json("Meal Plan name must be unique");
+			}
 		}
 		res.status(500).send("Server Error");
 	}
@@ -39,18 +35,24 @@ router.post("/random", async (req: Request, res: Response) => {
 			return res.status(400).json("Meal Plan name is required");
 		}
 
-		// 1. Create the new meal plan
-		const newPlanResult = await query(
-			"INSERT INTO meal_plans (name) VALUES ($1) RETURNING *",
-			[name],
-		);
-		const newPlan = newPlanResult.rows[0];
+		// 1. Create the new meal plan first
+		let newPlan: any;
+		try {
+			newPlan = await prisma.meal_plans.create({
+				data: { name },
+			});
+		} catch (err: unknown) {
+			if ((err as any).code === "P2002") {
+				return res.status(409).json("Meal Plan name must be unique");
+			}
+			throw err;
+		}
 
 		// 2. Get all available meals
-		const allMealsResult = await query("SELECT * FROM meals");
-		const allMeals = allMealsResult.rows;
+		const allMeals = await prisma.meals.findMany();
 
 		if (allMeals.length === 0) {
+			await prisma.meal_plans.delete({ where: { id: newPlan.id } });
 			return res
 				.status(400)
 				.json("No meals available to create a random plan.");
@@ -68,13 +70,10 @@ router.post("/random", async (req: Request, res: Response) => {
 		];
 
 		// 4. Generate a balanced random selection of meals
-		const _selectedMeals: any[] = [];
-		// Separate pools for weekdays and weekends to manage distribution better if needed
-		// But for strict "Only weekend meals on weekend", we just filter.
-
 		const weekendMeals = allMeals.filter((m: any) => m.suitable_for_weekend);
 
 		if (weekendMeals.length === 0) {
+			await prisma.meal_plans.delete({ where: { id: newPlan.id } });
 			return res
 				.status(400)
 				.json(
@@ -94,6 +93,8 @@ router.post("/random", async (req: Request, res: Response) => {
 		let availableWeekMeals = [...allMeals];
 		let availableWeekendMeals = [...weekendMeals];
 
+		const daysToCreate = [];
+
 		for (const day of days) {
 			let pickedMeal;
 
@@ -112,19 +113,23 @@ router.post("/random", async (req: Request, res: Response) => {
 			}
 
 			if (pickedMeal) {
-				await query(
-					"INSERT INTO meal_plan_days (meal_plan_id, day, meal_id) VALUES ($1, $2, $3)",
-					[newPlan.id, day, pickedMeal.id],
-				);
+				daysToCreate.push({
+					meal_plan_id: newPlan.id,
+					day: day,
+					meal_id: pickedMeal.id,
+				});
 			}
 		}
 
-		res.json(newPlan);
-	} catch (err: any) {
-		console.error(err.message);
-		if (err.message.includes("UNIQUE constraint failed")) {
-			return res.status(409).json("Meal Plan name must be unique");
+		if (daysToCreate.length > 0) {
+			await prisma.meal_plan_days.createMany({
+				data: daysToCreate,
+			});
 		}
+
+		res.json(newPlan);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -132,10 +137,12 @@ router.post("/random", async (req: Request, res: Response) => {
 // Get all meal plans
 router.get("/", async (_req: Request, res: Response) => {
 	try {
-		const allPlans = await query("SELECT * FROM meal_plans ORDER BY id DESC");
-		res.json(allPlans.rows);
-	} catch (err: any) {
-		console.error(err.message);
+		const allPlans = await prisma.meal_plans.findMany({
+			orderBy: { id: "desc" },
+		});
+		res.json(allPlans);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -144,48 +151,61 @@ router.get("/", async (_req: Request, res: Response) => {
 router.get("/:id", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		const plan = await query("SELECT * FROM meal_plans WHERE id = $1", [id]);
+		const planId = Number.parseInt(id as string, 10);
 
-		if (plan.rows.length === 0) {
+		const plan = await prisma.meal_plans.findUnique({
+			where: { id: planId },
+		});
+
+		if (!plan) {
 			return res.status(404).json("Meal Plan not found");
 		}
 
 		// Get days/meals for this plan
-		// We want to ensure we get results for days that exist in the plan table
-		const days = await query(
-			`
-            SELECT mpd.day, mpd.meal_id, m.name as meal_name 
-            FROM meal_plan_days mpd
-            LEFT JOIN meals m ON mpd.meal_id = m.id
-            WHERE mpd.meal_plan_id = $1
-			ORDER BY 
-				CASE mpd.day
-					WHEN 'Monday' THEN 1
-					WHEN 'Tuesday' THEN 2
-					WHEN 'Wednesday' THEN 3
-					WHEN 'Thursday' THEN 4
-					WHEN 'Friday' THEN 5
-					WHEN 'Saturday' THEN 6
-					WHEN 'Sunday' THEN 7
-				END
-            `,
-			[id],
-		);
+		const daysRaw = await prisma.meal_plan_days.findMany({
+			where: { meal_plan_id: planId },
+			include: {
+				meals: true,
+			},
+		});
+
+		// Sort days in JS
+		const dayOrder: { [key: string]: number } = {
+			Monday: 1,
+			Tuesday: 2,
+			Wednesday: 3,
+			Thursday: 4,
+			Friday: 5,
+			Saturday: 6,
+			Sunday: 7,
+		};
+
+		const sortedDays = daysRaw
+			.map((d: any) => ({
+				day: d.day,
+				meal_id: d.meal_id,
+				meal_name: d.meals?.name,
+			}))
+			.sort((a: any, b: any) => {
+				return (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);
+			});
 
 		// Get snacks for this plan
-		const snacks = await query(
-			`
-			SELECT mps.id as link_id, s.id, s.name
-			FROM meal_plan_snacks mps
-			JOIN snacks s ON mps.snack_id = s.id
-			WHERE mps.meal_plan_id = $1
-			`,
-			[id],
-		);
+		const snacks = await prisma.meal_plan_snacks.findMany({
+			where: { meal_plan_id: planId },
+			include: {
+				snacks: true,
+			},
+		});
+		const formattedSnacks = snacks.map((s: any) => ({
+			link_id: s.id,
+			id: s.snack_id,
+			name: s.snacks?.name,
+		}));
 
-		res.json({ ...plan.rows[0], days: days.rows, snacks: snacks.rows });
-	} catch (err: any) {
-		console.error(err.message);
+		res.json({ ...plan, days: sortedDays, snacks: formattedSnacks });
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -200,14 +220,16 @@ router.post("/:id/snacks", async (req: Request, res: Response) => {
 			return res.status(400).json("Snack ID is required");
 		}
 
-		const newLink = await query(
-			"INSERT INTO meal_plan_snacks (meal_plan_id, snack_id) VALUES ($1, $2) RETURNING *",
-			[id, snack_id],
-		);
+		const newLink = await prisma.meal_plan_snacks.create({
+			data: {
+				meal_plan_id: Number.parseInt(id as string, 10),
+				snack_id: Number.parseInt(snack_id, 10),
+			},
+		});
 
-		res.json(newLink.rows[0]);
-	} catch (err: any) {
-		console.error(err.message);
+		res.json(newLink);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -216,10 +238,12 @@ router.post("/:id/snacks", async (req: Request, res: Response) => {
 router.delete("/:id/snacks/:linkId", async (req: Request, res: Response) => {
 	try {
 		const { linkId } = req.params;
-		await query("DELETE FROM meal_plan_snacks WHERE id = $1", [linkId]);
+		await prisma.meal_plan_snacks.delete({
+			where: { id: Number.parseInt(linkId as string, 10) },
+		});
 		res.json("Snack removed from plan");
-	} catch (err: any) {
-		console.error(err.message);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -228,31 +252,37 @@ router.delete("/:id/snacks/:linkId", async (req: Request, res: Response) => {
 router.get("/:id/shopping-list", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		const shoppingList = await query(
-			`
+		const planId = Number.parseInt(id as string, 10);
+
+		// Use $queryRaw for complex aggregation
+		const shoppingList: any[] = await prisma.$queryRaw`
             SELECT i.name, i.unit, SUM(sub.quantity) as total_quantity 
             FROM (
                 SELECT mi.ingredient_id, mi.quantity 
                 FROM meal_plan_days mpd
                 JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
-                WHERE mpd.meal_plan_id = $1
+                WHERE mpd.meal_plan_id = ${planId}
                 
                 UNION ALL
 
                 SELECT si.ingredient_id, si.quantity
                 FROM meal_plan_snacks mps
                 JOIN snack_ingredients si ON mps.snack_id = si.snack_id
-                WHERE mps.meal_plan_id = $1
+                WHERE mps.meal_plan_id = ${planId}
             ) sub
             JOIN ingredients i ON sub.ingredient_id = i.id
             GROUP BY i.id, i.name, i.unit
             ORDER BY i.name
-            `,
-			[id],
-		);
-		res.json(shoppingList.rows);
-	} catch (err: any) {
-		console.error(err.message);
+        `;
+
+		const safeList = shoppingList.map((item: any) => ({
+			...item,
+			total_quantity: Number(item.total_quantity),
+		}));
+
+		res.json(safeList);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -263,37 +293,33 @@ router.post(
 	async (req: Request, res: Response) => {
 		try {
 			const { id } = req.params;
+			const planId = Number.parseInt(id as string, 10);
 
-			// 1. Get Shopping List Items
-			const shoppingList = await query(
-				`
+			const shoppingList: any[] = await prisma.$queryRaw`
             SELECT i.name, i.unit, SUM(sub.quantity) as total_quantity 
             FROM (
                 SELECT mi.ingredient_id, mi.quantity 
                 FROM meal_plan_days mpd
                 JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
-                WHERE mpd.meal_plan_id = $1
+                WHERE mpd.meal_plan_id = ${planId}
                 
                 UNION ALL
 
                 SELECT si.ingredient_id, si.quantity
                 FROM meal_plan_snacks mps
                 JOIN snack_ingredients si ON mps.snack_id = si.snack_id
-                WHERE mps.meal_plan_id = $1
+                WHERE mps.meal_plan_id = ${planId}
             ) sub
             JOIN ingredients i ON sub.ingredient_id = i.id
             GROUP BY i.id, i.name, i.unit
             ORDER BY i.name
-            `,
-				[id],
-			);
+        `;
 
-			if (shoppingList.rows.length === 0) {
+			if (shoppingList.length === 0) {
 				return res.status(400).json("Shopping list is empty.");
 			}
 
 			// 2. Authenticate
-			// Note: getAuthenticatedClient throws if no tokens are found
 			let oauth2Client;
 			try {
 				oauth2Client = await getAuthenticatedClient();
@@ -305,12 +331,11 @@ router.post(
 
 			const tasksService = google.tasks({ version: "v1", auth: oauth2Client });
 
-			// 3. Create a new Task List (e.g. "Shopping List - <PlanName>")
-			// Get plan name first
-			const planRes = await query("SELECT name FROM meal_plans WHERE id = $1", [
-				id,
-			]);
-			const planName = planRes.rows[0]?.name || "Plan";
+			// 3. Create a new Task List
+			const plan = await prisma.meal_plans.findUnique({
+				where: { id: planId },
+			});
+			const planName = plan?.name || "Plan";
 			const taskListTitle = `Shopping List: ${planName}`;
 
 			const taskList = await tasksService.tasklists.insert({
@@ -321,16 +346,16 @@ router.post(
 
 			const taskListId = taskList.data.id;
 
-			// 4. Create tasks for each item
-			// Note: Google Tasks API has quotas. We should be careful about batching or rate limits.
-			// For a personal app, looping is usually fine for < 100 items.
-			// Parallelizing might hit rate limits, so sequential is safer.
-			for (const item of shoppingList.rows) {
-				const title = `${item.name} (${item.total_quantity} ${
+			// 4. Create tasks
+			for (const item of shoppingList) {
+				const title = `${item.name} (${Number(item.total_quantity)} ${
 					item.unit || ""
-				})`;
+				})`
+					.replace(/\s+/g, " ")
+					.trim();
+
 				await tasksService.tasks.insert({
-					tasklist: taskListId!, // non-null assertion
+					tasklist: taskListId!,
 					requestBody: {
 						title: title,
 						status: "needsAction",
@@ -338,10 +363,17 @@ router.post(
 				});
 			}
 
-			res.json(`Successfully exported to Google Tasks list: ${taskListTitle}`);
-		} catch (err: any) {
-			console.error(err.message);
-			res.status(500).send(`Server Error: ${err.message}`);
+			res.json({
+				message: "Exported successfully",
+				taskListId: taskList.data.id,
+			});
+		} catch (err: unknown) {
+			if (err instanceof Error) {
+				console.error("Export error:", err);
+				res.status(500).send(`Export failed: ${err.message}`);
+			} else {
+				res.status(500).send("Export failed: Unknown error");
+			}
 		}
 	},
 );
@@ -350,21 +382,33 @@ router.post(
 router.put("/:id/days", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
+		const planId = Number.parseInt(id as string, 10);
 		const { day, meal_id } = req.body;
 
 		if (!day) {
 			return res.status(400).json("Day is required");
 		}
 
-		// Use REPLACE or upsert logic. Since (meal_plan_id, day) is PRIMARY KEY, INSERT OR REPLACE works in SQLite.
-		await query(
-			"INSERT OR REPLACE INTO meal_plan_days (meal_plan_id, day, meal_id) VALUES ($1, $2, $3)",
-			[id, day, meal_id || null], // Convert 0 or undefined to null
-		);
+		await prisma.meal_plan_days.upsert({
+			where: {
+				meal_plan_id_day: {
+					meal_plan_id: planId,
+					day: day,
+				},
+			},
+			create: {
+				meal_plan_id: planId,
+				day: day,
+				meal_id: meal_id,
+			},
+			update: {
+				meal_id: meal_id,
+			},
+		});
 
 		res.json("Meal updated for the day");
-	} catch (err: any) {
-		console.error(err.message);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });
@@ -373,10 +417,12 @@ router.put("/:id/days", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		await query("DELETE FROM meal_plans WHERE id = $1", [id]);
+		await prisma.meal_plans.delete({
+			where: { id: Number.parseInt(id as string, 10) },
+		});
 		res.json("Meal Plan was deleted");
-	} catch (err: any) {
-		console.error(err.message);
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}
 });

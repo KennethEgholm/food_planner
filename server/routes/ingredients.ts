@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from "express";
-import pool from "../db";
+import { prisma } from "../db";
 
 const router = express.Router();
 
@@ -15,11 +15,10 @@ router.post("/", async (req: Request, res: Response) => {
 			return;
 		}
 
-		const newIngredient = await pool.query(
-			"INSERT INTO ingredients (name, unit) VALUES($1, $2) RETURNING *",
-			[name, unit],
-		);
-		res.json(newIngredient.rows[0]);
+		const newIngredient = await prisma.ingredients.create({
+			data: { name, unit },
+		});
+		res.json(newIngredient);
 	} catch (err: any) {
 		console.error(err.message);
 		res.status(500).send("Server Error");
@@ -29,10 +28,10 @@ router.post("/", async (req: Request, res: Response) => {
 // Get all ingredients
 router.get("/", async (_req: Request, res: Response) => {
 	try {
-		const allIngredients = await pool.query(
-			"SELECT * FROM ingredients ORDER BY id ASC",
-		);
-		res.json(allIngredients.rows);
+		const allIngredients = await prisma.ingredients.findMany({
+			orderBy: { id: "asc" },
+		});
+		res.json(allIngredients);
 	} catch (err: any) {
 		console.error(err.message);
 		res.status(500).send("Server Error");
@@ -50,11 +49,11 @@ router.put("/:id", async (req: Request, res: Response) => {
 			return;
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const _updateIngredient = await pool.query(
-			"UPDATE ingredients SET name = $1, unit = $2 WHERE id = $3",
-			[name, unit, id],
-		);
+		await prisma.ingredients.update({
+			where: { id: Number(id) },
+			data: { name, unit },
+		});
+
 		res.json("Ingredient was updated!");
 	} catch (err: any) {
 		console.error(err.message);
@@ -66,11 +65,9 @@ router.put("/:id", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const _deleteIngredient = await pool.query(
-			"DELETE FROM ingredients WHERE id = $1",
-			[id],
-		);
+		await prisma.ingredients.delete({
+			where: { id: Number(id) },
+		});
 		res.json("Ingredient was deleted!");
 	} catch (err: any) {
 		console.error(err.message);

@@ -1,11 +1,14 @@
-import "dotenv/config";
+import path from "node:path";
 import cors from "cors";
+import dotenv from "dotenv";
 import express, { type Express, type Request, type Response } from "express";
 import authRoutes from "./routes/auth";
 import ingredientRoutes from "./routes/ingredients";
 import mealPlanRoutes from "./routes/mealPlans";
 import mealRoutes from "./routes/meals";
 import snackRoutes from "./routes/snacks";
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;

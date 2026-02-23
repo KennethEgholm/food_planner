@@ -1,5 +1,5 @@
 import express, { type Request, type Response } from "express";
-import pool from "../db";
+import { prisma } from "../db";
 
 const router = express.Router();
 
@@ -11,11 +11,10 @@ router.post("/", async (req: Request, res: Response) => {
 			res.status(400).json({ error: "Snack name is required" });
 			return;
 		}
-		const newSnack = await pool.query(
-			"INSERT INTO snacks (name) VALUES($1) RETURNING *",
-			[name],
-		);
-		res.json(newSnack.rows[0]);
+		const newSnack = await prisma.snacks.create({
+			data: { name },
+		});
+		res.json(newSnack);
 	} catch (err: any) {
 		console.error(err.message);
 		res.status(500).send("Server Error");
@@ -25,8 +24,10 @@ router.post("/", async (req: Request, res: Response) => {
 // Get all snacks
 router.get("/", async (_req: Request, res: Response) => {
 	try {
-		const allSnacks = await pool.query("SELECT * FROM snacks ORDER BY id ASC");
-		res.json(allSnacks.rows);
+		const allSnacks = await prisma.snacks.findMany({
+			orderBy: { id: "asc" },
+		});
+		res.json(allSnacks);
 	} catch (err: any) {
 		console.error(err.message);
 		res.status(500).send("Server Error");
@@ -39,22 +40,16 @@ router.put("/:id", async (req: Request, res: Response) => {
 		const { id } = req.params;
 		const { name } = req.body;
 
-		// Build dynamic update query
-		const fields = [];
-		const values = [];
-		if (name !== undefined) {
-			fields.push(`name = $${values.length + 1}`);
-			values.push(name);
-		}
-
-		if (fields.length === 0) {
+		// Simple check for name update, since that's the only field currently
+		if (!name) {
 			return res.status(400).json("No fields to update");
 		}
 
-		values.push(id);
-		const query = `UPDATE snacks SET ${fields.join(", ")} WHERE id = $${values.length}`;
+		await prisma.snacks.update({
+			where: { id: Number(id) },
+			data: { name },
+		});
 
-		await pool.query(query, values);
 		res.json("Snack was updated!");
 	} catch (err: any) {
 		console.error(err.message);
@@ -66,9 +61,9 @@ router.put("/:id", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		const _deleteSnack = await pool.query("DELETE FROM snacks WHERE id = $1", [
-			id,
-		]);
+		await prisma.snacks.delete({
+			where: { id: Number(id) },
+		});
 		res.json("Snack was deleted!");
 	} catch (err: any) {
 		console.error(err.message);
@@ -80,14 +75,21 @@ router.delete("/:id", async (req: Request, res: Response) => {
 router.get("/:id/ingredients", async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		const ingredients = await pool.query(
-			`SELECT i.id, i.name, i.unit, si.quantity 
-             FROM ingredients i 
-             JOIN snack_ingredients si ON i.id = si.ingredient_id 
-             WHERE si.snack_id = $1`,
-			[id],
-		);
-		res.json(ingredients.rows);
+		const snackIngredients = await prisma.snack_ingredients.findMany({
+			where: { snack_id: Number(id) },
+			include: {
+				ingredients: true,
+			},
+		});
+
+		const ingredients = snackIngredients.map((row: any) => ({
+			id: row.ingredients?.id,
+			name: row.ingredients?.name,
+			unit: row.ingredients?.unit,
+			quantity: row.quantity,
+		}));
+
+		res.json(ingredients);
 	} catch (err: any) {
 		console.error(err.message);
 		res.status(500).send("Server Error");
@@ -100,10 +102,13 @@ router.post("/:id/ingredients", async (req: Request, res: Response) => {
 		const { id } = req.params;
 		const { ingredient_id, quantity } = req.body;
 
-		await pool.query(
-			"INSERT INTO snack_ingredients (snack_id, ingredient_id, quantity) VALUES ($1, $2, $3)",
-			[id, ingredient_id, quantity],
-		);
+		await prisma.snack_ingredients.create({
+			data: {
+				snack_id: Number(id),
+				ingredient_id: Number(ingredient_id),
+				quantity: Number(quantity),
+			},
+		});
 
 		res.json("Ingredient added to snack");
 	} catch (err: any) {
@@ -118,10 +123,14 @@ router.delete(
 	async (req: Request, res: Response) => {
 		try {
 			const { id, ingredientId } = req.params;
-			await pool.query(
-				"DELETE FROM snack_ingredients WHERE snack_id = $1 AND ingredient_id = $2",
-				[id, ingredientId],
-			);
+			await prisma.snack_ingredients.delete({
+				where: {
+					snack_id_ingredient_id: {
+						snack_id: Number(id),
+						ingredient_id: Number(ingredientId),
+					},
+				},
+			});
 			res.json("Ingredient removed from snack");
 		} catch (err: any) {
 			console.error(err.message);

@@ -1,6 +1,6 @@
 import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
-import { query } from "../db";
+import { prisma } from "../db";
 
 const router = Router();
 
@@ -49,10 +49,11 @@ router.get("/callback", async (req: Request, res: Response) => {
 		// We'll store them as a JSON string in our key-value store
 		const tokensString = JSON.stringify(tokens);
 
-		await query(
-			"INSERT OR REPLACE INTO app_settings (key, value) VALUES ('google_tokens', $1)",
-			[tokensString],
-		);
+		await prisma.app_settings.upsert({
+			where: { key: "google_tokens" },
+			update: { value: tokensString },
+			create: { key: "google_tokens", value: tokensString },
+		});
 
 		console.log("Tokens saved successfully.");
 
@@ -68,10 +69,10 @@ router.get("/callback", async (req: Request, res: Response) => {
 // 3. Check Status (Are we connected?)
 router.get("/status", async (_req: Request, res: Response) => {
 	try {
-		const result = await query(
-			"SELECT value FROM app_settings WHERE key = 'google_tokens'",
-		);
-		if (result.rows.length > 0 && result.rows[0].value) {
+		const result = await prisma.app_settings.findUnique({
+			where: { key: "google_tokens" },
+		});
+		if (result?.value) {
 			res.json({ connected: true });
 		} else {
 			res.json({ connected: false });
@@ -84,14 +85,16 @@ router.get("/status", async (_req: Request, res: Response) => {
 
 // --- Helper to get authenticated client for other internal modules ---
 export const getAuthenticatedClient = async () => {
-	const result = await query(
-		"SELECT value FROM app_settings WHERE key = 'google_tokens'",
-	);
-	if (result.rows.length === 0 || !result.rows[0].value) {
+	// Retrieve tokens from DB
+	const result = await prisma.app_settings.findUnique({
+		where: { key: "google_tokens" },
+	});
+
+	if (!result || !result.value) {
 		throw new Error("No tokens found. Authenticate first.");
 	}
 
-	const tokens = JSON.parse(result.rows[0].value);
+	const tokens = JSON.parse(result.value);
 	oauth2Client.setCredentials(tokens);
 	return oauth2Client;
 };

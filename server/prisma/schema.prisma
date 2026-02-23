@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model app_settings {
+  key   String  @id @db.VarChar(255)
+  value String?
+}
+
+model ingredients {
+  id                Int                 @id @default(autoincrement())
+  name              String              @unique @db.VarChar(255)
+  unit              String?             @db.VarChar(50)
+  meal_ingredients  meal_ingredients[]
+  snack_ingredients snack_ingredients[]
+}
+
+model meal_ingredients {
+  meal_id       Int
+  ingredient_id Int
+  quantity      Decimal?    @db.Decimal(10, 2)
+  ingredients   ingredients @relation(fields: [ingredient_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  meals         meals       @relation(fields: [meal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([meal_id, ingredient_id])
+}
+
+model meal_plan_days {
+  meal_plan_id Int
+  day          String     @db.VarChar(20)
+  meal_id      Int?
+  meals        meals?     @relation(fields: [meal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  meal_plans   meal_plans @relation(fields: [meal_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([meal_plan_id, day])
+}
+
+model meal_plan_snacks {
+  id           Int         @id @default(autoincrement())
+  meal_plan_id Int?
+  snack_id     Int?
+  meal_plans   meal_plans? @relation(fields: [meal_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  snacks       snacks?     @relation(fields: [snack_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model meal_plans {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique @db.VarChar(255)
+  meal_plan_days   meal_plan_days[]
+  meal_plan_snacks meal_plan_snacks[]
+}
+
+model meals {
+  id                   Int                @id @default(autoincrement())
+  name                 String             @unique @db.VarChar(255)
+  suitable_for_weekend Boolean?           @default(false)
+  meal_ingredients     meal_ingredients[]
+  meal_plan_days       meal_plan_days[]
+}
+
+model snack_ingredients {
+  snack_id      Int
+  ingredient_id Int
+  quantity      Decimal?    @db.Decimal(10, 2)
+  ingredients   ingredients @relation(fields: [ingredient_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  snacks        snacks      @relation(fields: [snack_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([snack_id, ingredient_id])
+}
+
+model snacks {
+  id                Int                 @id @default(autoincrement())
+  name              String              @unique @db.VarChar(255)
+  meal_plan_snacks  meal_plan_snacks[]
+  snack_ingredients snack_ingredients[]
+}
