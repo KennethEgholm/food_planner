@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
@@ -127,8 +128,18 @@ router.delete(
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { imageId } = req.params;
+			const image = await prisma.meal_images.findUnique({
+				where: { id: Number(imageId) },
+			});
+			if (!image) {
+				res.status(404).json("Image not found");
+				return;
+			}
 			await prisma.meal_images.delete({
 				where: { id: Number(imageId) },
+			});
+			fs.unlink(image.path, (err) => {
+				if (err) console.error("Failed to delete image file:", err.message);
 			});
 			res.json("Image deleted!");
 		} catch (err: any) {
@@ -142,9 +153,17 @@ router.delete(
 router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
 	try {
 		const { id } = req.params;
+		const images = await prisma.meal_images.findMany({
+			where: { meal_id: Number(id) },
+		});
 		await prisma.meals.delete({
 			where: { id: Number(id) },
 		});
+		for (const img of images) {
+			fs.unlink(img.path, (err) => {
+				if (err) console.error("Failed to delete image file:", err.message);
+			});
+		}
 		res.json("Meal was deleted!");
 	} catch (err: any) {
 		console.error(err.message);
