@@ -2,11 +2,17 @@ import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
+interface MealImage {
+	id: number;
+	path: string;
+	sort_order: number;
+}
+
 interface Meal {
 	id: number;
 	name: string;
 	suitable_for_weekend: number | boolean;
-	image_path?: string;
+	meal_images?: MealImage[];
 }
 
 interface Ingredient {
@@ -40,9 +46,10 @@ const MealForm: React.FC<MealFormProps> = ({
 					initialMeal.suitable_for_weekend === true
 			: false,
 	);
-	const [selectedImage, setSelectedImage] = useState<File | null>(null);
-	const [previewUrl, setPreviewUrl] = useState<string | null>(
-		initialMeal?.image_path ? `/${initialMeal.image_path}` : null,
+	const [newImages, setNewImages] = useState<File[]>([]);
+	const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+	const [existingImages, setExistingImages] = useState<MealImage[]>(
+		initialMeal?.meal_images ?? [],
 	);
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
@@ -52,10 +59,26 @@ const MealForm: React.FC<MealFormProps> = ({
 	const [quantity, setQuantity] = useState<string>("");
 
 	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (e.target.files?.[0]) {
-			const file = e.target.files[0];
-			setSelectedImage(file);
-			setPreviewUrl(URL.createObjectURL(file));
+		if (!e.target.files) return;
+		const files = Array.from(e.target.files);
+		setNewImages((prev) => [...prev, ...files]);
+		setNewImagePreviews((prev) => [
+			...prev,
+			...files.map((f) => URL.createObjectURL(f)),
+		]);
+	};
+
+	const removeNewImage = (index: number) => {
+		setNewImages((prev) => prev.filter((_, i) => i !== index));
+		setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+	};
+
+	const removeExistingImage = async (imageId: number) => {
+		try {
+			await axios.delete(`/api/meals/${initialMeal?.id}/images/${imageId}`);
+			setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+		} catch (err: any) {
+			console.error(err.message);
 		}
 	};
 
@@ -95,8 +118,8 @@ const MealForm: React.FC<MealFormProps> = ({
 			const formData = new FormData();
 			formData.append("name", name);
 			formData.append("suitable_for_weekend", String(suitableForWeekend));
-			if (selectedImage) {
-				formData.append("image", selectedImage);
+			for (const img of newImages) {
+				formData.append("images", img);
 			}
 
 			if (isEditMode && currentMealId) {
@@ -189,13 +212,17 @@ const MealForm: React.FC<MealFormProps> = ({
 	};
 
 	const resetForm = () => {
+		setNewImages([]);
+		setNewImagePreviews([]);
 		if (!initialMeal) {
 			setName("");
 			setSuitableForWeekend(false);
 			setMealIngredients([]);
+			setExistingImages([]);
 		} else {
 			setName(initialMeal.name);
 			setSuitableForWeekend(initialMeal.suitable_for_weekend === 1);
+			setExistingImages(initialMeal.meal_images ?? []);
 			getMealIngredients();
 		}
 	};
@@ -293,7 +320,7 @@ const MealForm: React.FC<MealFormProps> = ({
 
 							<div className="mb-3">
 								<label htmlFor={`meal-image-${modalId}`} className="form-label">
-									Meal Image
+									Meal Images
 								</label>
 								{!readOnly && (
 									<input
@@ -301,21 +328,87 @@ const MealForm: React.FC<MealFormProps> = ({
 										className="form-control"
 										id={`meal-image-${modalId}`}
 										accept="image/*"
+										multiple
 										onChange={handleImageChange}
 									/>
 								)}
-								{previewUrl && (
-									<div className="mt-2 text-center">
-										<img
-											src={previewUrl}
-											alt="Meal Preview"
-											style={{
-												maxWidth: "100%",
-												maxHeight: "200px",
-												cursor: "pointer",
-											}}
-											onClick={() => setFullScreenImage(previewUrl)}
-										/>
+								{(existingImages.length > 0 || newImagePreviews.length > 0) && (
+									<div className="mt-2 d-flex flex-wrap gap-2">
+										{existingImages.map((img) => (
+											<div
+												key={img.id}
+												style={{
+													position: "relative",
+													display: "inline-block",
+												}}
+											>
+												<img
+													src={`/${img.path}`}
+													alt="Meal"
+													style={{
+														width: "80px",
+														height: "80px",
+														objectFit: "cover",
+														cursor: "pointer",
+													}}
+													onClick={() => setFullScreenImage(`/${img.path}`)}
+												/>
+												{!readOnly && (
+													<button
+														type="button"
+														className="btn btn-danger btn-sm"
+														style={{
+															position: "absolute",
+															top: 0,
+															right: 0,
+															padding: "0 4px",
+															fontSize: "10px",
+															lineHeight: "16px",
+														}}
+														onClick={() => removeExistingImage(img.id)}
+													>
+														✕
+													</button>
+												)}
+											</div>
+										))}
+										{newImagePreviews.map((url, idx) => (
+											<div
+												key={url}
+												style={{
+													position: "relative",
+													display: "inline-block",
+												}}
+											>
+												<img
+													src={url}
+													alt="New"
+													style={{
+														width: "80px",
+														height: "80px",
+														objectFit: "cover",
+														cursor: "pointer",
+														opacity: 0.7,
+													}}
+													onClick={() => setFullScreenImage(url)}
+												/>
+												<button
+													type="button"
+													className="btn btn-danger btn-sm"
+													style={{
+														position: "absolute",
+														top: 0,
+														right: 0,
+														padding: "0 4px",
+														fontSize: "10px",
+														lineHeight: "16px",
+													}}
+													onClick={() => removeNewImage(idx)}
+												>
+													✕
+												</button>
+											</div>
+										))}
 									</div>
 								)}
 							</div>

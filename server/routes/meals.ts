@@ -22,11 +22,10 @@ const upload = multer({ storage: storage });
 // Create a meal
 router.post(
 	"/",
-	upload.single("image"),
+	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { name, suitable_for_weekend } = req.body;
-			const image_path = req.file ? req.file.path : null;
 
 			if (!name) {
 				res.status(400).json({ error: "Meal name is required" });
@@ -36,10 +35,21 @@ router.post(
 				data: {
 					name,
 					suitable_for_weekend:
-						suitable_for_weekend === "true" || suitable_for_weekend === true, // handle string from formdata
-					image_path,
+						suitable_for_weekend === "true" || suitable_for_weekend === true,
 				},
 			});
+
+			const files = req.files as Express.Multer.File[];
+			if (files && files.length > 0) {
+				await prisma.meal_images.createMany({
+					data: files.map((file, idx) => ({
+						meal_id: newMeal.id,
+						path: file.path,
+						sort_order: idx,
+					})),
+				});
+			}
+
 			res.json(newMeal);
 		} catch (err: any) {
 			console.error(err.message);
@@ -53,6 +63,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 	try {
 		const allMeals = await prisma.meals.findMany({
 			orderBy: { id: "asc" },
+			include: { meal_images: { orderBy: { sort_order: "asc" } } },
 		});
 		res.json(allMeals);
 	} catch (err: any) {
@@ -64,35 +75,62 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 // Update a meal
 router.put(
 	"/:id",
-	upload.single("image"),
+	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;
 			const { name, suitable_for_weekend } = req.body;
-			const image_path = req.file ? req.file.path : undefined;
+			const files = req.files as Express.Multer.File[];
 
-			if (
-				name === undefined &&
-				suitable_for_weekend === undefined &&
-				image_path === undefined
-			) {
-				res.status(400).json("No fields to update");
-				return;
+			if (name !== undefined || suitable_for_weekend !== undefined) {
+				await prisma.meals.update({
+					where: { id: Number(id) },
+					data: {
+						...(name !== undefined && { name }),
+						...(suitable_for_weekend !== undefined && {
+							suitable_for_weekend:
+								suitable_for_weekend === "true" ||
+								suitable_for_weekend === true,
+						}),
+					},
+				});
 			}
 
-			await prisma.meals.update({
-				where: { id: Number(id) },
-				data: {
-					...(name !== undefined && { name }),
-					...(suitable_for_weekend !== undefined && {
-						suitable_for_weekend:
-							suitable_for_weekend === "true" || suitable_for_weekend === true,
-					}),
-					...(image_path !== undefined && { image_path }),
-				},
-			});
+			if (files && files.length > 0) {
+				// Find the current max sort_order for this meal
+				const existing = await prisma.meal_images.findMany({
+					where: { meal_id: Number(id) },
+					orderBy: { sort_order: "desc" },
+					take: 1,
+				});
+				const nextOrder = existing.length > 0 ? existing[0].sort_order + 1 : 0;
+				await prisma.meal_images.createMany({
+					data: files.map((file, idx) => ({
+						meal_id: Number(id),
+						path: file.path,
+						sort_order: nextOrder + idx,
+					})),
+				});
+			}
 
 			res.json("Meal was updated!");
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
+// Delete a single image from a meal
+router.delete(
+	"/:id/images/:imageId",
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { imageId } = req.params;
+			await prisma.meal_images.delete({
+				where: { id: Number(imageId) },
+			});
+			res.json("Image deleted!");
 		} catch (err: any) {
 			console.error(err.message);
 			res.status(500).send("Server Error");

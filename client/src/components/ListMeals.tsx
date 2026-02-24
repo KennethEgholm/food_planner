@@ -3,11 +3,17 @@ import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import MealForm from "./MealForm";
 
+interface MealImage {
+	id: number;
+	path: string;
+	sort_order: number;
+}
+
 interface Meal {
 	id: number;
 	name: string;
 	suitable_for_weekend: number | boolean;
-	image_path?: string;
+	meal_images?: MealImage[];
 }
 
 const ListMeals: React.FC = () => {
@@ -50,18 +56,37 @@ const ListMeals: React.FC = () => {
 					{meals.map((meal) => (
 						<tr key={meal.id}>
 							<td>
-								{meal.image_path && (
-									<img
-										src={`/${meal.image_path}`}
-										alt={meal.name}
-										style={{
-											width: "50px",
-											height: "50px",
-											objectFit: "cover",
-											cursor: "pointer",
-										}}
-										onClick={() => setFullScreenImage(`/${meal.image_path}`)}
-									/>
+								{meal.meal_images && meal.meal_images.length > 0 && (
+									<div
+										style={{ position: "relative", display: "inline-block" }}
+									>
+										<img
+											src={`/${meal.meal_images[0].path}`}
+											alt={meal.name}
+											style={{
+												width: "50px",
+												height: "50px",
+												objectFit: "cover",
+												cursor: "pointer",
+											}}
+											onClick={() =>
+												setFullScreenImage(`/${meal.meal_images?.[0].path}`)
+											}
+										/>
+										{meal.meal_images.length > 1 && (
+											<span
+												className="badge bg-secondary"
+												style={{
+													position: "absolute",
+													bottom: 0,
+													right: 0,
+													fontSize: "9px",
+												}}
+											>
+												+{meal.meal_images.length - 1}
+											</span>
+										)}
+									</div>
 								)}
 							</td>
 							<td>

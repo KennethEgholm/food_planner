@@ -59,9 +59,17 @@ model meals {
   id                   Int                @id @default(autoincrement())
   name                 String             @unique @db.VarChar(255)
   suitable_for_weekend Boolean?           @default(false)
-  image_path           String?            @db.VarChar(512)
   meal_ingredients     meal_ingredients[]
   meal_plan_days       meal_plan_days[]
+  meal_images          meal_images[]
+}
+
+model meal_images {
+  id         Int    @id @default(autoincrement())
+  meal_id    Int
+  path       String @db.VarChar(512)
+  sort_order Int    @default(0)
+  meals      meals  @relation(fields: [meal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model snack_ingredients {
