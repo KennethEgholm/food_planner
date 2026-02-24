@@ -185,6 +185,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 				day: d.day,
 				meal_id: d.meal_id,
 				meal_name: d.meals?.name,
+				meal_image: d.meals?.image_path,
 			}))
 			.sort((a: any, b: any) => {
 				return (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);

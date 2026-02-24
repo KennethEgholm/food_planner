@@ -11,6 +11,7 @@ interface MealPlanDay {
 	day: string;
 	meal_id: number | null;
 	meal_name: string | null;
+	meal_image?: string | null;
 }
 
 interface MealPlanSnack {
@@ -26,12 +27,11 @@ interface ShowMealPlanProps {
 const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 	const [days, setDays] = useState<MealPlanDay[]>([]);
 	const [snacks, setSnacks] = useState<MealPlanSnack[]>([]);
+	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
 	const getMealPlanDetails = useCallback(async () => {
 		try {
-			const res = await axios.get(
-				`/api/meal-plans/${mealPlan.id}`,
-			);
+			const res = await axios.get(`/api/meal-plans/${mealPlan.id}`);
 			setDays(res.data.days);
 			setSnacks(res.data.snacks || []);
 		} catch (err: any) {
@@ -80,11 +80,30 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 											<tr key={`${day.day}-${day.meal_id}-${index}`}>
 												<td>{day.day}</td>
 												<td>
-													{day.meal_name ? (
-														day.meal_name
-													) : (
-														<span className="text-secondary">(No Meal)</span>
-													)}
+													<div className="d-flex align-items-center">
+														{day.meal_image && (
+															<img
+																src={`/${day.meal_image}`}
+																alt={day.meal_name || "Meal"}
+																style={{
+																	width: "40px",
+																	height: "40px",
+																	objectFit: "cover",
+																	marginRight: "10px",
+																	borderRadius: "4px",
+																	cursor: "pointer",
+																}}
+																onClick={() =>
+																	setFullScreenImage(`/${day.meal_image}`)
+																}
+															/>
+														)}
+														{day.meal_name ? (
+															day.meal_name
+														) : (
+															<span className="text-secondary">(No Meal)</span>
+														)}
+													</div>
 												</td>
 											</tr>
 										))}
@@ -118,6 +137,29 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 					</div>
 				</div>
 			</div>
+			{fullScreenImage && (
+				<div
+					style={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(0,0,0,0.8)",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						zIndex: 9999,
+					}}
+					onClick={() => setFullScreenImage(null)}
+				>
+					<img
+						src={fullScreenImage}
+						alt="Full Screen"
+						style={{ maxHeight: "90%", maxWidth: "90%" }}
+					/>
+				</div>
+			)}
 		</>
 	);
 };

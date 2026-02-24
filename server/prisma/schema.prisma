@@ -59,6 +59,7 @@ model meals {
   id                   Int                @id @default(autoincrement())
   name                 String             @unique @db.VarChar(255)
   suitable_for_weekend Boolean?           @default(false)
+  image_path           String?            @db.VarChar(512)
   meal_ingredients     meal_ingredients[]
   meal_plan_days       meal_plan_days[]
 }

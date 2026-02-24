@@ -5,7 +5,8 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 interface Meal {
 	id: number;
 	name: string;
-	suitable_for_weekend: number;
+	suitable_for_weekend: number | boolean;
+	image_path?: string;
 }
 
 interface Ingredient {
@@ -34,13 +35,29 @@ const MealForm: React.FC<MealFormProps> = ({
 
 	const [name, setName] = useState(initialMeal ? initialMeal.name : "");
 	const [suitableForWeekend, setSuitableForWeekend] = useState(
-		initialMeal ? initialMeal.suitable_for_weekend === 1 : false,
+		initialMeal
+			? initialMeal.suitable_for_weekend === 1 ||
+					initialMeal.suitable_for_weekend === true
+			: false,
 	);
+	const [selectedImage, setSelectedImage] = useState<File | null>(null);
+	const [previewUrl, setPreviewUrl] = useState<string | null>(
+		initialMeal?.image_path ? `/${initialMeal.image_path}` : null,
+	);
+	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 
 	const [mealIngredients, setMealIngredients] = useState<MealIngredient[]>([]);
 	const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
 	const [selectedIngredient, setSelectedIngredient] = useState<string>("");
 	const [quantity, setQuantity] = useState<string>("");
+
+	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.files?.[0]) {
+			const file = e.target.files[0];
+			setSelectedImage(file);
+			setPreviewUrl(URL.createObjectURL(file));
+		}
+	};
 
 	const getMealIngredients = useCallback(async () => {
 		if (!initialMeal) return;
@@ -75,14 +92,27 @@ const MealForm: React.FC<MealFormProps> = ({
 		try {
 			let currentMealId = initialMeal?.id;
 
+			const formData = new FormData();
+			formData.append("name", name);
+			formData.append("suitable_for_weekend", String(suitableForWeekend));
+			if (selectedImage) {
+				formData.append("image", selectedImage);
+			}
+
 			if (isEditMode && currentMealId) {
 				// Update existing meal details
-				const body = { name, suitable_for_weekend: suitableForWeekend ? 1 : 0 };
-				await axios.put(`/api/meals/${currentMealId}`, body);
+				await axios.put(`/api/meals/${currentMealId}`, formData, {
+					headers: {
+						"Content-Type": "multipart/form-data",
+					},
+				});
 			} else {
 				// Create new meal
-				const body = { name, suitable_for_weekend: suitableForWeekend };
-				const res = await axios.post("/api/meals", body);
+				const res = await axios.post("/api/meals", formData, {
+					headers: {
+						"Content-Type": "multipart/form-data",
+					},
+				});
 				currentMealId = res.data.id;
 			}
 
@@ -261,6 +291,35 @@ const MealForm: React.FC<MealFormProps> = ({
 								</label>
 							</div>
 
+							<div className="mb-3">
+								<label htmlFor={`meal-image-${modalId}`} className="form-label">
+									Meal Image
+								</label>
+								{!readOnly && (
+									<input
+										type="file"
+										className="form-control"
+										id={`meal-image-${modalId}`}
+										accept="image/*"
+										onChange={handleImageChange}
+									/>
+								)}
+								{previewUrl && (
+									<div className="mt-2 text-center">
+										<img
+											src={previewUrl}
+											alt="Meal Preview"
+											style={{
+												maxWidth: "100%",
+												maxHeight: "200px",
+												cursor: "pointer",
+											}}
+											onClick={() => setFullScreenImage(previewUrl)}
+										/>
+									</div>
+								)}
+							</div>
+
 							<hr />
 							<h5>Ingredients</h5>
 							{!readOnly && (
@@ -342,6 +401,29 @@ const MealForm: React.FC<MealFormProps> = ({
 					</div>
 				</div>
 			</div>
+			{fullScreenImage && (
+				<div
+					style={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(0,0,0,0.8)",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						zIndex: 9999,
+					}}
+					onClick={() => setFullScreenImage(null)}
+				>
+					<img
+						src={fullScreenImage}
+						alt="Full Screen"
+						style={{ maxHeight: "90%", maxWidth: "90%" }}
+					/>
+				</div>
+			)}
 		</Fragment>
 	);
 };

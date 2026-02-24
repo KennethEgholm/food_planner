@@ -16,6 +16,10 @@ export default defineConfig(({ mode }) => {
 					changeOrigin: true,
 					rewrite: (path) => path.replace(/^\/api/, ""),
 				},
+				"/uploads": {
+					target: env.VITE_API_URL || "http://localhost:5001",
+					changeOrigin: true,
+				},
 			},
 		},
 	};
