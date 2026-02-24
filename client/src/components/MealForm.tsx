@@ -51,7 +51,34 @@ const MealForm: React.FC<MealFormProps> = ({
 	const [existingImages, setExistingImages] = useState<MealImage[]>(
 		initialMeal?.meal_images ?? [],
 	);
-	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+	const [fullScreen, setFullScreen] = useState<{
+		images: string[];
+		index: number;
+	} | null>(null);
+
+	useEffect(() => {
+		const handleKey = (e: KeyboardEvent) => {
+			if (!fullScreen) return;
+			if (e.key === "ArrowRight") {
+				setFullScreen((fs) =>
+					fs ? { ...fs, index: (fs.index + 1) % fs.images.length } : fs,
+				);
+			} else if (e.key === "ArrowLeft") {
+				setFullScreen((fs) =>
+					fs
+						? {
+								...fs,
+								index: (fs.index - 1 + fs.images.length) % fs.images.length,
+							}
+						: fs,
+				);
+			} else if (e.key === "Escape") {
+				setFullScreen(null);
+			}
+		};
+		window.addEventListener("keydown", handleKey);
+		return () => window.removeEventListener("keydown", handleKey);
+	}, [fullScreen]);
 
 	const [mealIngredients, setMealIngredients] = useState<MealIngredient[]>([]);
 	const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
@@ -334,7 +361,7 @@ const MealForm: React.FC<MealFormProps> = ({
 								)}
 								{(existingImages.length > 0 || newImagePreviews.length > 0) && (
 									<div className="mt-2 d-flex flex-wrap gap-2">
-										{existingImages.map((img) => (
+										{existingImages.map((img, idx) => (
 											<div
 												key={img.id}
 												style={{
@@ -351,7 +378,15 @@ const MealForm: React.FC<MealFormProps> = ({
 														objectFit: "cover",
 														cursor: "pointer",
 													}}
-													onClick={() => setFullScreenImage(`/${img.path}`)}
+													onClick={() =>
+														setFullScreen({
+															images: [
+																...existingImages.map((i) => `/${i.path}`),
+																...newImagePreviews,
+															],
+															index: idx,
+														})
+													}
 												/>
 												{!readOnly && (
 													<button
@@ -390,7 +425,15 @@ const MealForm: React.FC<MealFormProps> = ({
 														cursor: "pointer",
 														opacity: 0.7,
 													}}
-													onClick={() => setFullScreenImage(url)}
+													onClick={() =>
+														setFullScreen({
+															images: [
+																...existingImages.map((i) => `/${i.path}`),
+																...newImagePreviews,
+															],
+															index: existingImages.length + idx,
+														})
+													}
 												/>
 												<button
 													type="button"
@@ -494,7 +537,7 @@ const MealForm: React.FC<MealFormProps> = ({
 					</div>
 				</div>
 			</div>
-			{fullScreenImage && (
+			{fullScreen && (
 				<div
 					style={{
 						position: "fixed",
@@ -502,19 +545,118 @@ const MealForm: React.FC<MealFormProps> = ({
 						left: 0,
 						width: "100%",
 						height: "100%",
-						backgroundColor: "rgba(0,0,0,0.8)",
+						backgroundColor: "rgba(0,0,0,0.85)",
 						display: "flex",
 						justifyContent: "center",
 						alignItems: "center",
 						zIndex: 9999,
 					}}
-					onClick={() => setFullScreenImage(null)}
+					onClick={() => setFullScreen(null)}
 				>
-					<img
-						src={fullScreenImage}
-						alt="Full Screen"
-						style={{ maxHeight: "90%", maxWidth: "90%" }}
-					/>
+					{fullScreen.images.length > 1 && (
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								setFullScreen((fs) =>
+									fs
+										? {
+												...fs,
+												index:
+													(fs.index - 1 + fs.images.length) % fs.images.length,
+											}
+										: fs,
+								);
+							}}
+							style={{
+								position: "absolute",
+								left: "20px",
+								background: "rgba(255,255,255,0.2)",
+								border: "none",
+								color: "white",
+								fontSize: "2rem",
+								padding: "0.25rem 0.75rem",
+								borderRadius: "4px",
+								cursor: "pointer",
+							}}
+						>
+							&#8249;
+						</button>
+					)}
+
+					<div
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<img
+							src={fullScreen.images[fullScreen.index]}
+							alt="Full Screen"
+							style={{
+								maxHeight: "85vh",
+								maxWidth: "85vw",
+								borderRadius: "6px",
+							}}
+						/>
+						{fullScreen.images.length > 1 && (
+							<div
+								style={{
+									color: "white",
+									marginTop: "10px",
+									fontSize: "0.9rem",
+								}}
+							>
+								{fullScreen.index + 1} / {fullScreen.images.length}
+							</div>
+						)}
+					</div>
+
+					{fullScreen.images.length > 1 && (
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								setFullScreen((fs) =>
+									fs ? { ...fs, index: (fs.index + 1) % fs.images.length } : fs,
+								);
+							}}
+							style={{
+								position: "absolute",
+								right: "20px",
+								background: "rgba(255,255,255,0.2)",
+								border: "none",
+								color: "white",
+								fontSize: "2rem",
+								padding: "0.25rem 0.75rem",
+								borderRadius: "4px",
+								cursor: "pointer",
+							}}
+						>
+							&#8250;
+						</button>
+					)}
+
+					<button
+						type="button"
+						onClick={() => setFullScreen(null)}
+						style={{
+							position: "absolute",
+							top: "16px",
+							right: "16px",
+							background: "rgba(255,255,255,0.2)",
+							border: "none",
+							color: "white",
+							fontSize: "1.5rem",
+							padding: "0.1rem 0.6rem",
+							borderRadius: "4px",
+							cursor: "pointer",
+						}}
+					>
+						&times;
+					</button>
 				</div>
 			)}
 		</Fragment>
