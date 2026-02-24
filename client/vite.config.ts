@@ -4,6 +4,9 @@ import { defineConfig, loadEnv } from "vite";
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, process.cwd(), "");
+	// In production, we don't need a specific VITE_API_URL if we proxy everything via nginx to /api
+	// However, if we do need it, it must be available at build time.
+	// For this setup, we will rely on the relative path /api to go through Nginx.
 	return {
 		plugins: [react()],
 		server: {

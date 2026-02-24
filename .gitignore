@@ -6,4 +6,4 @@ dist
 build
 pgdata
 server/uploads
-
+*.jpg
