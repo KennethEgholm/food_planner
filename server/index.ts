@@ -28,6 +28,12 @@ app.use("/meal-plans", mealPlanRoutes);
 app.use("/snacks", snackRoutes);
 app.use("/auth/google", authRoutes);
 
+// Global error handler
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+	console.error(err.stack);
+	res.status(500).json({ error: err.message || "Something went wrong!" });
+});
+
 app.listen(PORT, () => {
 	console.log(`Server is running on port ${PORT}`);
 });
