@@ -32,6 +32,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
     restart: unless-stopped
 
   client:
@@ -58,3 +60,4 @@ services:
 
 volumes:
   pgdata:
+  uploads_data:
