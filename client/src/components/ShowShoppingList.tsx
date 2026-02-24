@@ -26,7 +26,7 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 	const getShoppingList = useCallback(async () => {
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/meal-plans/${mealPlan.id}/shopping-list`,
+				`/api/meal-plans/${mealPlan.id}/shopping-list`,
 			);
 			setList(res.data);
 		} catch (err: any) {
@@ -36,10 +36,10 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 
 	const checkAuthStatus = useCallback(async () => {
 		try {
-			const res = await axios.get("http://localhost:5001/auth/google/status");
+			const res = await axios.get("/api/auth/google/status");
 			setIsConnected(res.data.connected);
 			if (!res.data.connected) {
-				const urlRes = await axios.get("http://localhost:5001/auth/google/url");
+				const urlRes = await axios.get("/api/auth/google/url");
 				setAuthUrl(urlRes.data.url);
 			}
 		} catch (err: any) {
@@ -49,9 +49,7 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 
 	const exportToGoogleTasks = async () => {
 		try {
-			await axios.post(
-				`http://localhost:5001/meal-plans/${mealPlan.id}/shopping-list/export`,
-			);
+			await axios.post(`/api/meal-plans/${mealPlan.id}/shopping-list/export`);
 			toast.success("Successfully exported to Google Tasks!");
 		} catch (err: any) {
 			console.error(err.message);

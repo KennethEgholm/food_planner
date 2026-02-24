@@ -30,7 +30,7 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 	const getMealPlanDetails = useCallback(async () => {
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/meal-plans/${mealPlan.id}`,
+				`/api/meal-plans/${mealPlan.id}`,
 			);
 			setDays(res.data.days);
 			setSnacks(res.data.snacks || []);

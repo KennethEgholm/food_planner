@@ -15,7 +15,7 @@ const ListMealPlans: React.FC = () => {
 
 	const getPlans = useCallback(async () => {
 		try {
-			const response = await axios.get("http://localhost:5001/meal-plans");
+			const response = await axios.get("/api/meal-plans");
 			setPlans(response.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -24,7 +24,7 @@ const ListMealPlans: React.FC = () => {
 
 	const deletePlan = async (id: number) => {
 		try {
-			await axios.delete(`http://localhost:5001/meal-plans/${id}`);
+			await axios.delete(`/api/meal-plans/${id}`);
 			setPlans(plans.filter((plan) => plan.id !== id));
 		} catch (err: any) {
 			console.error(err.message);

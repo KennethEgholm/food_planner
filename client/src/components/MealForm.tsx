@@ -46,7 +46,7 @@ const MealForm: React.FC<MealFormProps> = ({
 		if (!initialMeal) return;
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/meals/${initialMeal.id}/ingredients`,
+				`/api/meals/${initialMeal.id}/ingredients`,
 			);
 			setMealIngredients(res.data);
 		} catch (err: any) {
@@ -56,7 +56,7 @@ const MealForm: React.FC<MealFormProps> = ({
 
 	const getAllIngredients = useCallback(async () => {
 		try {
-			const res = await axios.get("http://localhost:5001/ingredients");
+			const res = await axios.get("/api/ingredients");
 			setAllIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -78,11 +78,11 @@ const MealForm: React.FC<MealFormProps> = ({
 			if (isEditMode && currentMealId) {
 				// Update existing meal details
 				const body = { name, suitable_for_weekend: suitableForWeekend ? 1 : 0 };
-				await axios.put(`http://localhost:5001/meals/${currentMealId}`, body);
+				await axios.put(`/api/meals/${currentMealId}`, body);
 			} else {
 				// Create new meal
 				const body = { name, suitable_for_weekend: suitableForWeekend };
-				const res = await axios.post("http://localhost:5001/meals", body);
+				const res = await axios.post("/api/meals", body);
 				currentMealId = res.data.id;
 			}
 
@@ -92,7 +92,7 @@ const MealForm: React.FC<MealFormProps> = ({
 			if (!isEditMode && mealIngredients.length > 0) {
 				const promises = mealIngredients.map((ing) =>
 					axios.post(
-						`http://localhost:5001/meals/${currentMealId}/ingredients`,
+						`/api/meals/${currentMealId}/ingredients`,
 						{
 							ingredient_id: ing.id,
 							quantity: ing.quantity,
@@ -121,7 +121,7 @@ const MealForm: React.FC<MealFormProps> = ({
 			// Edit Mode: Add directly to DB
 			try {
 				await axios.post(
-					`http://localhost:5001/meals/${initialMeal.id}/ingredients`,
+					`/api/meals/${initialMeal.id}/ingredients`,
 					{
 						ingredient_id: ingredientId,
 						quantity: qty,
@@ -150,7 +150,7 @@ const MealForm: React.FC<MealFormProps> = ({
 			// Edit Mode: Remove from DB
 			try {
 				await axios.delete(
-					`http://localhost:5001/meals/${initialMeal.id}/ingredients/${ingredient.id}`,
+					`/api/meals/${initialMeal.id}/ingredients/${ingredient.id}`,
 				);
 				getMealIngredients();
 			} catch (err: any) {

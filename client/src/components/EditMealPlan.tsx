@@ -54,7 +54,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 	const getPlanDetails = useCallback(async () => {
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/meal-plans/${mealPlan.id}`,
+				`/api/meal-plans/${mealPlan.id}`,
 			);
 			const data = res.data;
 			// Convert array of days to map
@@ -77,8 +77,8 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 	const getAllOptions = useCallback(async () => {
 		try {
 			const [mealsRes, snacksRes] = await Promise.all([
-				axios.get("http://localhost:5001/meals"),
-				axios.get("http://localhost:5001/snacks"),
+				axios.get("/api/meals"),
+				axios.get("/api/snacks"),
 			]);
 			setAllMeals(mealsRes.data);
 			setAllSnacks(snacksRes.data);
@@ -91,7 +91,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 		try {
 			if (!selectedSnack) return;
 			await axios.post(
-				`http://localhost:5001/meal-plans/${mealPlan.id}/snacks`,
+				`/api/meal-plans/${mealPlan.id}/snacks`,
 				{
 					snack_id: Number(selectedSnack),
 				},
@@ -106,7 +106,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 	const removeSnackFromPlan = async (linkId: number) => {
 		try {
 			await axios.delete(
-				`http://localhost:5001/meal-plans/${mealPlan.id}/snacks/${linkId}`,
+				`/api/meal-plans/${mealPlan.id}/snacks/${linkId}`,
 			);
 			getPlanDetails();
 		} catch (err: any) {
@@ -125,7 +125,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 		try {
 			// Iterate through all days in state and update them
 			const promises = Object.entries(daysData).map(([day, mealId]) =>
-				axios.put(`http://localhost:5001/meal-plans/${mealPlan.id}/days`, {
+				axios.put(`/api/meal-plans/${mealPlan.id}/days`, {
 					day,
 					meal_id: mealId,
 				}),

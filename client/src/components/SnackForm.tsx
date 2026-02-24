@@ -41,7 +41,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 		if (!initialSnack) return;
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/snacks/${initialSnack.id}/ingredients`,
+				`/api/snacks/${initialSnack.id}/ingredients`,
 			);
 			setSnackIngredients(res.data);
 		} catch (err: any) {
@@ -51,7 +51,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 
 	const getAllIngredients = useCallback(async () => {
 		try {
-			const res = await axios.get("http://localhost:5001/ingredients");
+			const res = await axios.get("/api/ingredients");
 			setAllIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -73,11 +73,11 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			if (isEditMode && currentSnackId) {
 				// Update existing
 				const body = { name };
-				await axios.put(`http://localhost:5001/snacks/${currentSnackId}`, body);
+				await axios.put(`/api/snacks/${currentSnackId}`, body);
 			} else {
 				// Create new
 				const body = { name };
-				const res = await axios.post("http://localhost:5001/snacks", body);
+				const res = await axios.post("/api/snacks", body);
 				currentSnackId = res.data.id;
 			}
 
@@ -87,7 +87,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			if (!isEditMode && snackIngredients.length > 0) {
 				const promises = snackIngredients.map((ing) =>
 					axios.post(
-						`http://localhost:5001/snacks/${currentSnackId}/ingredients`,
+						`/api/snacks/${currentSnackId}/ingredients`,
 						{
 							ingredient_id: ing.id,
 							quantity: ing.quantity,
@@ -116,7 +116,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			// Edit Mode: Add directly to DB
 			try {
 				await axios.post(
-					`http://localhost:5001/snacks/${initialSnack.id}/ingredients`,
+					`/api/snacks/${initialSnack.id}/ingredients`,
 					{
 						ingredient_id: ingredientId,
 						quantity: qty,
@@ -145,7 +145,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			// Edit Mode: Remove from DB
 			try {
 				await axios.delete(
-					`http://localhost:5001/snacks/${initialSnack.id}/ingredients/${ingredient.id}`,
+					`/api/snacks/${initialSnack.id}/ingredients/${ingredient.id}`,
 				);
 				getSnackIngredients();
 			} catch (err: any) {

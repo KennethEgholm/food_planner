@@ -10,7 +10,7 @@ const InputMeal: React.FC = () => {
 		e.preventDefault();
 		try {
 			const body = { name, suitable_for_weekend: suitableForWeekend };
-			await axios.post("http://localhost:5001/meals", body);
+			await axios.post("/api/meals", body);
 			window.location.href = "/";
 		} catch (err: any) {
 			console.error(err.message);

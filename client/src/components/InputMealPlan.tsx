@@ -10,7 +10,7 @@ const InputMealPlan: React.FC = () => {
 		e.preventDefault();
 		try {
 			const body = { name };
-			await axios.post("http://localhost:5001/meal-plans", body);
+			await axios.post("/api/meal-plans", body);
 			window.location.href = "/";
 		} catch (err: any) {
 			console.error(err.message);
@@ -26,7 +26,7 @@ const InputMealPlan: React.FC = () => {
 		e.preventDefault();
 		try {
 			const body = { name };
-			await axios.post("http://localhost:5001/meal-plans/random", body);
+			await axios.post("/api/meal-plans/random", body);
 			window.location.href = "/";
 		} catch (err: any) {
 			console.error(err.message);

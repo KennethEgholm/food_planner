@@ -35,7 +35,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 	const getMealIngredients = useCallback(async () => {
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/meals/${meal.id}/ingredients`,
+				`/api/meals/${meal.id}/ingredients`,
 			);
 			setMealIngredients(res.data);
 		} catch (err: any) {
@@ -45,7 +45,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 
 	const getAllIngredients = useCallback(async () => {
 		try {
-			const res = await axios.get("http://localhost:5001/ingredients");
+			const res = await axios.get("/api/ingredients");
 			setAllIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -55,7 +55,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 	const addIngredientToMeal = async () => {
 		try {
 			if (!selectedIngredient || !quantity) return;
-			await axios.post(`http://localhost:5001/meals/${meal.id}/ingredients`, {
+			await axios.post(`/api/meals/${meal.id}/ingredients`, {
 				ingredient_id: Number.parseInt(selectedIngredient, 10),
 				quantity: Number.parseFloat(quantity),
 			});
@@ -70,7 +70,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 	const removeIngredientFromMeal = async (ingredientId: number) => {
 		try {
 			await axios.delete(
-				`http://localhost:5001/meals/${meal.id}/ingredients/${ingredientId}`,
+				`/api/meals/${meal.id}/ingredients/${ingredientId}`,
 			);
 			getMealIngredients();
 		} catch (err: any) {
@@ -82,7 +82,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 		e.preventDefault();
 		try {
 			const body = { name, suitable_for_weekend: suitableForWeekend ? 1 : 0 };
-			await axios.put(`http://localhost:5001/meals/${meal.id}`, body);
+			await axios.put(`/api/meals/${meal.id}`, body);
 			window.location.reload();
 		} catch (err: any) {
 			console.error(err.message);

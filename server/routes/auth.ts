@@ -6,7 +6,9 @@ const router = Router();
 
 const CLIENT_ID = process.env.GOOGLE_TASK_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_TASK_CLIENT_SECRET;
-const REDIRECT_URI = `http://localhost:${process.env.SERVER_PORT || 5001}/auth/google/callback`;
+const BASE_URL =
+	process.env.API_URL || `http://localhost:${process.env.PORT || 5001}`;
+const REDIRECT_URI = `${BASE_URL}/auth/google/callback`;
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
 	console.error(

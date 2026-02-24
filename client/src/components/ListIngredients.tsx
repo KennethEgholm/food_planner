@@ -16,7 +16,7 @@ const ListIngredients: React.FC = () => {
 
 	const getIngredients = useCallback(async () => {
 		try {
-			const response = await axios.get("http://localhost:5001/ingredients");
+			const response = await axios.get("/api/ingredients");
 			setIngredients(response.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -25,7 +25,7 @@ const ListIngredients: React.FC = () => {
 
 	const deleteIngredient = async (id: number) => {
 		try {
-			await axios.delete(`http://localhost:5001/ingredients/${id}`);
+			await axios.delete(`/api/ingredients/${id}`);
 			setIngredients(ingredients.filter((ingredient) => ingredient.id !== id));
 		} catch (err: any) {
 			console.error(err.message);

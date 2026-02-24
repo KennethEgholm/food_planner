@@ -33,7 +33,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 	const getSnackIngredients = useCallback(async () => {
 		try {
 			const res = await axios.get(
-				`http://localhost:5001/snacks/${snack.id}/ingredients`,
+				`/api/snacks/${snack.id}/ingredients`,
 			);
 			setSnackIngredients(res.data);
 		} catch (err: any) {
@@ -43,7 +43,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 
 	const getAllIngredients = useCallback(async () => {
 		try {
-			const res = await axios.get("http://localhost:5001/ingredients");
+			const res = await axios.get("/api/ingredients");
 			setAllIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -53,7 +53,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 	const addIngredientToSnack = async () => {
 		try {
 			if (!selectedIngredient || !quantity) return;
-			await axios.post(`http://localhost:5001/snacks/${snack.id}/ingredients`, {
+			await axios.post(`/api/snacks/${snack.id}/ingredients`, {
 				ingredient_id: Number.parseInt(selectedIngredient, 10),
 				quantity: Number.parseFloat(quantity),
 			});
@@ -68,7 +68,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 	const removeIngredientFromSnack = async (ingredientId: number) => {
 		try {
 			await axios.delete(
-				`http://localhost:5001/snacks/${snack.id}/ingredients/${ingredientId}`,
+				`/api/snacks/${snack.id}/ingredients/${ingredientId}`,
 			);
 			getSnackIngredients();
 		} catch (err: any) {
@@ -80,7 +80,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 		e.preventDefault();
 		try {
 			const body = { name };
-			await axios.put(`http://localhost:5001/snacks/${snack.id}`, body);
+			await axios.put(`/api/snacks/${snack.id}`, body);
 			window.location.reload();
 		} catch (err: any) {
 			console.error(err.message);

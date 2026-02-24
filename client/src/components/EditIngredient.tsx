@@ -21,7 +21,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 		try {
 			const body = { name, unit };
 			await axios.put(
-				`http://localhost:5001/ingredients/${ingredient.id}`,
+				`/api/ingredients/${ingredient.id}`,
 				body,
 			);
 			window.location.href = "/";

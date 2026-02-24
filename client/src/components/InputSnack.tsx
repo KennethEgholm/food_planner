@@ -9,7 +9,7 @@ const InputSnack: React.FC = () => {
 		e.preventDefault();
 		try {
 			const body = { name };
-			await axios.post("http://localhost:5001/snacks", body);
+			await axios.post("/api/snacks", body);
 			// Refresh to show changes, maintaining tab via localStorage
 			window.location.reload();
 		} catch (err: any) {
