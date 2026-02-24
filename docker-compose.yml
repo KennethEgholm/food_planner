@@ -32,7 +32,7 @@ services:
     ports:
       - "${CLIENT_PORT}:5173"
     environment:
-      - VITE_API_URL=http://localhost:${SERVER_PORT}
+      - VITE_API_URL=http://server:${SERVER_PORT}
     depends_on:
       - server
     volumes:

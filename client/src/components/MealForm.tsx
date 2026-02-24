@@ -28,7 +28,7 @@ const MealForm: React.FC<MealFormProps> = ({
 	initialMeal,
 	readOnly = false,
 }) => {
-	// If we have an initial meal, we are in Edit Mode.
+	// If we have an initial meal, we are in Edit/View Mode.
 	// Otherwise, we are in Create Mode (Draft Mode).
 	const isEditMode = !!initialMeal && !readOnly;
 
@@ -64,11 +64,13 @@ const MealForm: React.FC<MealFormProps> = ({
 	}, []);
 
 	useEffect(() => {
-		if (isEditMode) {
+		if (initialMeal) {
 			getMealIngredients();
 		}
-		getAllIngredients();
-	}, [isEditMode, getMealIngredients, getAllIngredients]);
+		if (!readOnly) {
+			getAllIngredients();
+		}
+	}, [initialMeal, readOnly, getMealIngredients, getAllIngredients]);
 
 	const handleSave = async (e?: React.SyntheticEvent) => {
 		if (e) e.preventDefault();
