@@ -62,7 +62,7 @@ router.post(
 router.get("/", async (_req: Request, res: Response): Promise<void> => {
 	try {
 		const allMeals = await prisma.meals.findMany({
-			orderBy: { id: "asc" },
+			orderBy: { name: "asc" },
 			include: { meal_images: { orderBy: { sort_order: "asc" } } },
 		});
 		res.json(allMeals);

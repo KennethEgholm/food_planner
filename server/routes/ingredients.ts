@@ -29,7 +29,7 @@ router.post("/", async (req: Request, res: Response) => {
 router.get("/", async (_req: Request, res: Response) => {
 	try {
 		const allIngredients = await prisma.ingredients.findMany({
-			orderBy: { id: "asc" },
+			orderBy: { name: "asc" },
 		});
 		res.json(allIngredients);
 	} catch (err: any) {
