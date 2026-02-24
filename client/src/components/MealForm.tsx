@@ -45,9 +45,7 @@ const MealForm: React.FC<MealFormProps> = ({
 	const getMealIngredients = useCallback(async () => {
 		if (!initialMeal) return;
 		try {
-			const res = await axios.get(
-				`/api/meals/${initialMeal.id}/ingredients`,
-			);
+			const res = await axios.get(`/api/meals/${initialMeal.id}/ingredients`);
 			setMealIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -93,13 +91,10 @@ const MealForm: React.FC<MealFormProps> = ({
 			// If we were in Create Mode, we now need to save all the locally added ingredients
 			if (!isEditMode && mealIngredients.length > 0) {
 				const promises = mealIngredients.map((ing) =>
-					axios.post(
-						`/api/meals/${currentMealId}/ingredients`,
-						{
-							ingredient_id: ing.id,
-							quantity: ing.quantity,
-						},
-					),
+					axios.post(`/api/meals/${currentMealId}/ingredients`, {
+						ingredient_id: ing.id,
+						quantity: ing.quantity,
+					}),
 				);
 				await Promise.all(promises);
 			}
@@ -122,13 +117,10 @@ const MealForm: React.FC<MealFormProps> = ({
 		if (isEditMode && initialMeal) {
 			// Edit Mode: Add directly to DB
 			try {
-				await axios.post(
-					`/api/meals/${initialMeal.id}/ingredients`,
-					{
-						ingredient_id: ingredientId,
-						quantity: qty,
-					},
-				);
+				await axios.post(`/api/meals/${initialMeal.id}/ingredients`, {
+					ingredient_id: ingredientId,
+					quantity: qty,
+				});
 				getMealIngredients();
 			} catch (err: any) {
 				console.error(err.message);
