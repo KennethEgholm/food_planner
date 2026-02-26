@@ -35,6 +35,7 @@ const InputMeal: React.FC = () => {
 			<div
 				className="modal"
 				id="addMealModal"
+				tabIndex={-1}
 				onClick={() => {
 					setName("");
 					setSuitableForWeekend(false);

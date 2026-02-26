@@ -53,7 +53,12 @@ const InputMealPlan: React.FC = () => {
 			</div>
 
 			{/* Modal */}
-			<div className="modal" id="addMealPlanModal" onClick={() => setName("")}>
+			<div
+				className="modal"
+				id="addMealPlanModal"
+				tabIndex={-1}
+				onClick={() => setName("")}
+			>
 				<div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
 					<div className="modal-content">
 						<div className="modal-header">

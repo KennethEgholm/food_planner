@@ -32,9 +32,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 
 	const getSnackIngredients = useCallback(async () => {
 		try {
-			const res = await axios.get(
-				`/api/snacks/${snack.id}/ingredients`,
-			);
+			const res = await axios.get(`/api/snacks/${snack.id}/ingredients`);
 			setSnackIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -67,9 +65,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 
 	const removeIngredientFromSnack = async (ingredientId: number) => {
 		try {
-			await axios.delete(
-				`/api/snacks/${snack.id}/ingredients/${ingredientId}`,
-			);
+			await axios.delete(`/api/snacks/${snack.id}/ingredients/${ingredientId}`);
 			getSnackIngredients();
 		} catch (err: any) {
 			console.error(err.message);
@@ -107,6 +103,7 @@ const EditSnack: React.FC<EditSnackProps> = ({ snack }) => {
 			<div
 				className="modal"
 				id={`snackId${snack.id}`}
+				tabIndex={-1}
 				onClick={() => setName(snack.name)}
 			>
 				<div

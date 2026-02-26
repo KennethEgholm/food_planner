@@ -2,9 +2,16 @@ import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 
+interface SnackImage {
+	id: number;
+	path: string;
+	sort_order: number;
+}
+
 interface Snack {
 	id: number;
 	name: string;
+	snack_images?: SnackImage[];
 }
 
 interface Ingredient {
@@ -30,6 +37,15 @@ const SnackForm: React.FC<SnackFormProps> = ({
 	const isEditMode = !!initialSnack && !readOnly;
 
 	const [name, setName] = useState(initialSnack ? initialSnack.name : "");
+	const [newImages, setNewImages] = useState<File[]>([]);
+	const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+	const [existingImages, setExistingImages] = useState<SnackImage[]>(
+		initialSnack?.snack_images ?? [],
+	);
+	const [fullScreen, setFullScreen] = useState<{
+		images: string[];
+		index: number;
+	} | null>(null);
 	const [snackIngredients, setSnackIngredients] = useState<SnackIngredient[]>(
 		[],
 	);
@@ -37,12 +53,60 @@ const SnackForm: React.FC<SnackFormProps> = ({
 	const [selectedIngredient, setSelectedIngredient] = useState<string>("");
 	const [quantity, setQuantity] = useState<string>("");
 
+	useEffect(() => {
+		const handleKey = (e: KeyboardEvent) => {
+			if (!fullScreen) return;
+			if (e.key === "ArrowRight") {
+				setFullScreen((fs) =>
+					fs ? { ...fs, index: (fs.index + 1) % fs.images.length } : fs,
+				);
+			} else if (e.key === "ArrowLeft") {
+				setFullScreen((fs) =>
+					fs
+						? {
+								...fs,
+								index: (fs.index - 1 + fs.images.length) % fs.images.length,
+							}
+						: fs,
+				);
+			} else if (e.key === "Escape") {
+				e.stopPropagation();
+				setFullScreen(null);
+			}
+		};
+		window.addEventListener("keydown", handleKey, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKey, { capture: true });
+	}, [fullScreen]);
+
+	const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (!e.target.files) return;
+		const files = Array.from(e.target.files);
+		setNewImages((prev) => [...prev, ...files]);
+		setNewImagePreviews((prev) => [
+			...prev,
+			...files.map((f) => URL.createObjectURL(f)),
+		]);
+	};
+
+	const removeNewImage = (index: number) => {
+		setNewImages((prev) => prev.filter((_, i) => i !== index));
+		setNewImagePreviews((prev) => prev.filter((_, i) => i !== index));
+	};
+
+	const removeExistingImage = async (imageId: number) => {
+		try {
+			await axios.delete(`/api/snacks/${initialSnack?.id}/images/${imageId}`);
+			setExistingImages((prev) => prev.filter((img) => img.id !== imageId));
+		} catch (err: any) {
+			console.error(err.message);
+		}
+	};
+
 	const getSnackIngredients = useCallback(async () => {
 		if (!initialSnack) return;
 		try {
-			const res = await axios.get(
-				`/api/snacks/${initialSnack.id}/ingredients`,
-			);
+			const res = await axios.get(`/api/snacks/${initialSnack.id}/ingredients`);
 			setSnackIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -59,25 +123,29 @@ const SnackForm: React.FC<SnackFormProps> = ({
 	}, []);
 
 	useEffect(() => {
-		if (isEditMode) {
+		if (initialSnack) {
 			getSnackIngredients();
 		}
-		getAllIngredients();
-	}, [isEditMode, getSnackIngredients, getAllIngredients]);
+		if (!readOnly) {
+			getAllIngredients();
+		}
+	}, [initialSnack, readOnly, getSnackIngredients, getAllIngredients]);
 
 	const handleSave = async (e?: React.SyntheticEvent) => {
 		if (e) e.preventDefault();
 		try {
 			let currentSnackId = initialSnack?.id;
 
+			const formData = new FormData();
+			formData.append("name", name);
+			for (const img of newImages) {
+				formData.append("images", img);
+			}
+
 			if (isEditMode && currentSnackId) {
-				// Update existing
-				const body = { name };
-				await axios.put(`/api/snacks/${currentSnackId}`, body);
+				await axios.put(`/api/snacks/${currentSnackId}`, formData);
 			} else {
-				// Create new
-				const body = { name };
-				const res = await axios.post("/api/snacks", body);
+				const res = await axios.post("/api/snacks", formData);
 				currentSnackId = res.data.id;
 			}
 
@@ -86,13 +154,10 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			// If creating, save ingredients locally queued
 			if (!isEditMode && snackIngredients.length > 0) {
 				const promises = snackIngredients.map((ing) =>
-					axios.post(
-						`/api/snacks/${currentSnackId}/ingredients`,
-						{
-							ingredient_id: ing.id,
-							quantity: ing.quantity,
-						},
-					),
+					axios.post(`/api/snacks/${currentSnackId}/ingredients`, {
+						ingredient_id: ing.id,
+						quantity: ing.quantity,
+					}),
 				);
 				await Promise.all(promises);
 			}
@@ -115,13 +180,10 @@ const SnackForm: React.FC<SnackFormProps> = ({
 		if (isEditMode && initialSnack) {
 			// Edit Mode: Add directly to DB
 			try {
-				await axios.post(
-					`/api/snacks/${initialSnack.id}/ingredients`,
-					{
-						ingredient_id: ingredientId,
-						quantity: qty,
-					},
-				);
+				await axios.post(`/api/snacks/${initialSnack.id}/ingredients`, {
+					ingredient_id: ingredientId,
+					quantity: qty,
+				});
 				getSnackIngredients();
 			} catch (err: any) {
 				console.error(err.message);
@@ -160,11 +222,15 @@ const SnackForm: React.FC<SnackFormProps> = ({
 	};
 
 	const resetForm = () => {
+		setNewImages([]);
+		setNewImagePreviews([]);
 		if (!initialSnack) {
 			setName("");
 			setSnackIngredients([]);
+			setExistingImages([]);
 		} else {
 			setName(initialSnack.name);
+			setExistingImages(initialSnack.snack_images ?? []);
 			getSnackIngredients();
 		}
 	};
@@ -198,7 +264,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 				</button>
 			)}
 
-			<div className="modal" id={modalId}>
+			<div className="modal" id={modalId} tabIndex={-1}>
 				<div
 					className="modal-dialog modal-lg"
 					onClick={(e) => e.stopPropagation()}
@@ -241,6 +307,120 @@ const SnackForm: React.FC<SnackFormProps> = ({
 										}
 									}}
 								/>
+							</div>
+
+							<div className="mb-3">
+								<label
+									htmlFor={`snack-image-${modalId}`}
+									className="form-label"
+								>
+									Snack Images
+								</label>
+								{!readOnly && (
+									<input
+										type="file"
+										className="form-control"
+										id={`snack-image-${modalId}`}
+										accept="image/*"
+										multiple
+										onChange={handleImageChange}
+									/>
+								)}
+								{(existingImages.length > 0 || newImagePreviews.length > 0) && (
+									<div className="mt-2 d-flex flex-wrap gap-2">
+										{existingImages.map((img, idx) => (
+											<div
+												key={img.id}
+												style={{
+													position: "relative",
+													display: "inline-block",
+												}}
+											>
+												<img
+													src={`/${img.path}`}
+													alt="Snack"
+													style={{
+														width: "80px",
+														height: "80px",
+														objectFit: "cover",
+														cursor: "pointer",
+													}}
+													onClick={() =>
+														setFullScreen({
+															images: [
+																...existingImages.map((i) => `/${i.path}`),
+																...newImagePreviews,
+															],
+															index: idx,
+														})
+													}
+												/>
+												{!readOnly && (
+													<button
+														type="button"
+														className="btn btn-danger btn-sm"
+														style={{
+															position: "absolute",
+															top: 0,
+															right: 0,
+															padding: "0 4px",
+															fontSize: "10px",
+															lineHeight: "16px",
+														}}
+														onClick={() => removeExistingImage(img.id)}
+													>
+														✕
+													</button>
+												)}
+											</div>
+										))}
+										{newImagePreviews.map((url, idx) => (
+											<div
+												key={url}
+												style={{
+													position: "relative",
+													display: "inline-block",
+												}}
+											>
+												<img
+													src={url}
+													alt="New"
+													style={{
+														width: "80px",
+														height: "80px",
+														objectFit: "cover",
+														cursor: "pointer",
+														opacity: 0.7,
+													}}
+													onClick={() =>
+														setFullScreen({
+															images: [
+																...existingImages.map((i) => `/${i.path}`),
+																...newImagePreviews,
+															],
+															index: existingImages.length + idx,
+														})
+													}
+												/>
+												<button
+													type="button"
+													className="btn btn-danger btn-sm"
+													style={{
+														position: "absolute",
+														top: 0,
+														right: 0,
+														padding: "0 4px",
+														fontSize: "10px",
+														lineHeight: "16px",
+													}}
+													onClick={() => removeNewImage(idx)}
+												>
+													✕
+												</button>
+											</div>
+										))}
+									</div>
+								)}
 							</div>
 
 							<hr />
@@ -324,6 +504,125 @@ const SnackForm: React.FC<SnackFormProps> = ({
 					</div>
 				</div>
 			</div>
+			{fullScreen && (
+				<div
+					style={{
+						position: "fixed",
+						top: 0,
+						left: 0,
+						width: "100%",
+						height: "100%",
+						backgroundColor: "rgba(0,0,0,0.85)",
+						display: "flex",
+						justifyContent: "center",
+						alignItems: "center",
+						zIndex: 9999,
+					}}
+					onClick={() => setFullScreen(null)}
+				>
+					{fullScreen.images.length > 1 && (
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								setFullScreen((fs) =>
+									fs
+										? {
+												...fs,
+												index:
+													(fs.index - 1 + fs.images.length) % fs.images.length,
+											}
+										: fs,
+								);
+							}}
+							style={{
+								position: "absolute",
+								left: "20px",
+								background: "rgba(255,255,255,0.2)",
+								border: "none",
+								color: "white",
+								fontSize: "2rem",
+								padding: "0.25rem 0.75rem",
+								borderRadius: "4px",
+								cursor: "pointer",
+							}}
+						>
+							&#8249;
+						</button>
+					)}
+					<div
+						style={{
+							display: "flex",
+							flexDirection: "column",
+							alignItems: "center",
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<img
+							src={fullScreen.images[fullScreen.index]}
+							alt="Full Screen"
+							style={{
+								maxHeight: "85vh",
+								maxWidth: "85vw",
+								borderRadius: "6px",
+							}}
+						/>
+						{fullScreen.images.length > 1 && (
+							<div
+								style={{
+									color: "white",
+									marginTop: "10px",
+									fontSize: "0.9rem",
+								}}
+							>
+								{fullScreen.index + 1} / {fullScreen.images.length}
+							</div>
+						)}
+					</div>
+					{fullScreen.images.length > 1 && (
+						<button
+							type="button"
+							onClick={(e) => {
+								e.stopPropagation();
+								setFullScreen((fs) =>
+									fs ? { ...fs, index: (fs.index + 1) % fs.images.length } : fs,
+								);
+							}}
+							style={{
+								position: "absolute",
+								right: "20px",
+								background: "rgba(255,255,255,0.2)",
+								border: "none",
+								color: "white",
+								fontSize: "2rem",
+								padding: "0.25rem 0.75rem",
+								borderRadius: "4px",
+								cursor: "pointer",
+							}}
+						>
+							&#8250;
+						</button>
+					)}
+					<button
+						type="button"
+						onClick={() => setFullScreen(null)}
+						style={{
+							position: "absolute",
+							top: "16px",
+							right: "16px",
+							background: "rgba(255,255,255,0.2)",
+							border: "none",
+							color: "white",
+							fontSize: "1.5rem",
+							padding: "0.1rem 0.6rem",
+							borderRadius: "4px",
+							cursor: "pointer",
+						}}
+					>
+						&times;
+					</button>
+				</div>
+			)}
 		</Fragment>
 	);
 };

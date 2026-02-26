@@ -87,4 +87,13 @@ model snacks {
   name              String              @unique @db.VarChar(255)
   meal_plan_snacks  meal_plan_snacks[]
   snack_ingredients snack_ingredients[]
+  snack_images      snack_images[]
+}
+
+model snack_images {
+  id         Int    @id @default(autoincrement())
+  snack_id   Int
+  path       String @db.VarChar(512)
+  sort_order Int    @default(0)
+  snacks     snacks @relation(fields: [snack_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }

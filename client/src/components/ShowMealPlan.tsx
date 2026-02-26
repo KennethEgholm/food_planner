@@ -52,7 +52,11 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 			</button>
 
 			{/* Modal */}
-			<div className="modal fade" id={`showMealPlan${mealPlan.id}`}>
+			<div
+				className="modal fade"
+				id={`showMealPlan${mealPlan.id}`}
+				tabIndex={-1}
+			>
 				<div className="modal-dialog modal-lg">
 					<div className="modal-content">
 						<div className="modal-header">

@@ -73,11 +73,13 @@ const MealForm: React.FC<MealFormProps> = ({
 						: fs,
 				);
 			} else if (e.key === "Escape") {
+				e.stopPropagation();
 				setFullScreen(null);
 			}
 		};
-		window.addEventListener("keydown", handleKey);
-		return () => window.removeEventListener("keydown", handleKey);
+		window.addEventListener("keydown", handleKey, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKey, { capture: true });
 	}, [fullScreen]);
 
 	const [mealIngredients, setMealIngredients] = useState<MealIngredient[]>([]);
@@ -151,18 +153,10 @@ const MealForm: React.FC<MealFormProps> = ({
 
 			if (isEditMode && currentMealId) {
 				// Update existing meal details
-				await axios.put(`/api/meals/${currentMealId}`, formData, {
-					headers: {
-						"Content-Type": "multipart/form-data",
-					},
-				});
+				await axios.put(`/api/meals/${currentMealId}`, formData);
 			} else {
 				// Create new meal
-				const res = await axios.post("/api/meals", formData, {
-					headers: {
-						"Content-Type": "multipart/form-data",
-					},
-				});
+				const res = await axios.post("/api/meals", formData);
 				currentMealId = res.data.id;
 			}
 
@@ -283,7 +277,7 @@ const MealForm: React.FC<MealFormProps> = ({
 				</button>
 			)}
 
-			<div className="modal" id={modalId}>
+			<div className="modal" id={modalId} tabIndex={-1}>
 				<div
 					className="modal-dialog modal-lg"
 					onClick={(e) => e.stopPropagation()}

@@ -37,6 +37,7 @@ const InputIngredient: React.FC = () => {
 			<div
 				className="modal"
 				id="addIngredientModal"
+				tabIndex={-1}
 				onClick={() => {
 					setName("");
 					setUnit("");

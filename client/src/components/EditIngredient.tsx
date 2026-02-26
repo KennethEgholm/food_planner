@@ -20,10 +20,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 		e.preventDefault();
 		try {
 			const body = { name, unit };
-			await axios.put(
-				`/api/ingredients/${ingredient.id}`,
-				body,
-			);
+			await axios.put(`/api/ingredients/${ingredient.id}`, body);
 			window.location.href = "/";
 		} catch (err: any) {
 			console.error(err.message);
@@ -45,6 +42,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 			<div
 				className="modal"
 				id={`id${ingredient.id}`}
+				tabIndex={-1}
 				onClick={() => {
 					setName(ingredient.name);
 					setUnit(ingredient.unit || "");

@@ -73,7 +73,7 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 			</button>
 
 			{/* Modal */}
-			<div className="modal" id={`shoppingList${mealPlan.id}`}>
+			<div className="modal" id={`shoppingList${mealPlan.id}`} tabIndex={-1}>
 				<div
 					className="modal-dialog modal-lg"
 					onClick={(e) => e.stopPropagation()}

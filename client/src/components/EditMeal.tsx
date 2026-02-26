@@ -34,9 +34,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 
 	const getMealIngredients = useCallback(async () => {
 		try {
-			const res = await axios.get(
-				`/api/meals/${meal.id}/ingredients`,
-			);
+			const res = await axios.get(`/api/meals/${meal.id}/ingredients`);
 			setMealIngredients(res.data);
 		} catch (err: any) {
 			console.error(err.message);
@@ -69,9 +67,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 
 	const removeIngredientFromMeal = async (ingredientId: number) => {
 		try {
-			await axios.delete(
-				`/api/meals/${meal.id}/ingredients/${ingredientId}`,
-			);
+			await axios.delete(`/api/meals/${meal.id}/ingredients/${ingredientId}`);
 			getMealIngredients();
 		} catch (err: any) {
 			console.error(err.message);
@@ -109,6 +105,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 			<div
 				className="modal"
 				id={`mealId${meal.id}`}
+				tabIndex={-1}
 				onClick={() => {
 					setName(meal.name);
 					setSuitableForWeekend(meal.suitable_for_weekend === 1);

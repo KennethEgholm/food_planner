@@ -53,9 +53,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 	// Fetch plan details (days and snacks)
 	const getPlanDetails = useCallback(async () => {
 		try {
-			const res = await axios.get(
-				`/api/meal-plans/${mealPlan.id}`,
-			);
+			const res = await axios.get(`/api/meal-plans/${mealPlan.id}`);
 			const data = res.data;
 			// Convert array of days to map
 			const dayMap: Record<string, number | null> = {};
@@ -90,12 +88,9 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 	const addSnackToPlan = async () => {
 		try {
 			if (!selectedSnack) return;
-			await axios.post(
-				`/api/meal-plans/${mealPlan.id}/snacks`,
-				{
-					snack_id: Number(selectedSnack),
-				},
-			);
+			await axios.post(`/api/meal-plans/${mealPlan.id}/snacks`, {
+				snack_id: Number(selectedSnack),
+			});
 			getPlanDetails();
 			setSelectedSnack("");
 		} catch (err: any) {
@@ -105,9 +100,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 
 	const removeSnackFromPlan = async (linkId: number) => {
 		try {
-			await axios.delete(
-				`/api/meal-plans/${mealPlan.id}/snacks/${linkId}`,
-			);
+			await axios.delete(`/api/meal-plans/${mealPlan.id}/snacks/${linkId}`);
 			getPlanDetails();
 		} catch (err: any) {
 			console.error(err.message);
@@ -157,7 +150,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 			</button>
 
 			{/* Modal */}
-			<div className="modal" id={`planId${mealPlan.id}`}>
+			<div className="modal" id={`planId${mealPlan.id}`} tabIndex={-1}>
 				<div
 					className="modal-dialog modal-lg"
 					onClick={(e) => e.stopPropagation()}

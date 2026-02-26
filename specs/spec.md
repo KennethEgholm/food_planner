@@ -21,10 +21,13 @@ Food Planner is a web application designed to help users plan their meals for th
             - stk
 - **Meals**: 
     - Users can create meals and associate them with ingredients. A meal has a name and a list of ingredients with their respective quantities.
-    - A meal can have a image attached to it. The image is shown as thumbnail and when pressed the image is shown in full size.
+    - A meal can have zero to many images attached to it. The images are shown as thumbnails and when pressed the image is shown in full size.
     - Uploaded images must be stored as files in a folder on the server.
 
-- **Snacks**: Snacks is a category similar to meals. They also consist of ingredients.
+- **Snacks**: 
+    - Snacks are a category similar to meals. They also consist of ingredients.
+    - A snack can have zero to many images attached to it. The images are shown as thumbnails and when pressed the image is shown in full size.
+    - Uploaded images must be stored as files in a folder on the server.
 
 - **Shopping List Generation**: 
     - Users can generate a shopping list based on their meal plan, which aggregates the required ingredients and their quantities for the week.
