@@ -276,8 +276,20 @@ const MealForm: React.FC<MealFormProps> = ({
 					Edit
 				</button>
 			) : (
-				<div style={{ position: "fixed", bottom: "24px", left: 0, right: 0, zIndex: 1040, pointerEvents: "none" }}>
-					<div className="container" style={{ display: "flex", justifyContent: "flex-end" }}>
+				<div
+					style={{
+						position: "fixed",
+						bottom: "24px",
+						left: 0,
+						right: 0,
+						zIndex: 1040,
+						pointerEvents: "none",
+					}}
+				>
+					<div
+						className="container"
+						style={{ display: "flex", justifyContent: "flex-end" }}
+					>
 						<button
 							type="button"
 							data-bs-toggle="modal"
@@ -294,7 +306,8 @@ const MealForm: React.FC<MealFormProps> = ({
 								lineHeight: "1",
 								border: "none",
 								cursor: "pointer",
-								boxShadow: "0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15)",
+								boxShadow:
+									"0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15)",
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "center",

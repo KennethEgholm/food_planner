@@ -20,8 +20,14 @@ function App() {
 	const [snackCount, setSnackCount] = useState(null);
 
 	useEffect(() => {
-		axios.get("/api/meals").then((res) => setMealCount(res.data.length)).catch(() => {});
-		axios.get("/api/snacks").then((res) => setSnackCount(res.data.length)).catch(() => {});
+		axios
+			.get("/api/meals")
+			.then((res) => setMealCount(res.data.length))
+			.catch(() => {});
+		axios
+			.get("/api/snacks")
+			.then((res) => setSnackCount(res.data.length))
+			.catch(() => {});
 	}, []);
 
 	return (
@@ -78,7 +84,12 @@ function App() {
 								<h1 className="mt-5 mb-4">
 									Food Planner Meal List
 									{mealCount !== null && (
-										<span className="badge bg-secondary ms-3 align-middle" style={{ fontSize: "0.5em" }}>{mealCount}</span>
+										<span
+											className="badge bg-secondary ms-3 align-middle"
+											style={{ fontSize: "0.5em" }}
+										>
+											{mealCount}
+										</span>
 									)}
 								</h1>
 								<MealForm />
@@ -93,7 +104,12 @@ function App() {
 								<h1 className="mt-5 mb-4">
 									Food Planner Snack List
 									{snackCount !== null && (
-										<span className="badge bg-secondary ms-3 align-middle" style={{ fontSize: "0.5em" }}>{snackCount}</span>
+										<span
+											className="badge bg-secondary ms-3 align-middle"
+											style={{ fontSize: "0.5em" }}
+										>
+											{snackCount}
+										</span>
 									)}
 								</h1>
 								<SnackForm />
