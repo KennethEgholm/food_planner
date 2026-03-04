@@ -266,15 +266,44 @@ const MealForm: React.FC<MealFormProps> = ({
 				>
 					{initialMeal?.name}
 				</span>
-			) : (
+			) : initialMeal ? (
 				<button
 					type="button"
-					className={`btn ${initialMeal ? "btn-warning" : "btn-primary"}`}
+					className="btn btn-warning"
 					data-bs-toggle="modal"
 					data-bs-target={targetId}
 				>
-					{initialMeal ? "Edit" : "Add Meal"}
+					Edit
 				</button>
+			) : (
+				<div style={{ position: "fixed", bottom: "24px", left: 0, right: 0, zIndex: 1040, pointerEvents: "none" }}>
+					<div className="container" style={{ display: "flex", justifyContent: "flex-end" }}>
+						<button
+							type="button"
+							data-bs-toggle="modal"
+							data-bs-target={targetId}
+							aria-label="Add Meal"
+							style={{
+								pointerEvents: "all",
+								width: "56px",
+								height: "56px",
+								borderRadius: "50%",
+								backgroundColor: "#1565c0",
+								color: "white",
+								fontSize: "28px",
+								lineHeight: "1",
+								border: "none",
+								cursor: "pointer",
+								boxShadow: "0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15)",
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
+							}}
+						>
+							+
+						</button>
+					</div>
+				</div>
 			)}
 
 			<div className="modal" id={modalId} tabIndex={-1}>

@@ -2,11 +2,19 @@
 
 import axios from "axios";
 import type React from "react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 const InputIngredient: React.FC = () => {
 	const [name, setName] = useState<string>("");
 	const [unit, setUnit] = useState<string>("");
+	const [count, setCount] = useState<number | null>(null);
+
+	useEffect(() => {
+		axios
+			.get("/api/ingredients")
+			.then((res) => setCount(res.data.length))
+			.catch(() => {});
+	}, []);
 
 	const onSubmit = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
@@ -21,16 +29,41 @@ const InputIngredient: React.FC = () => {
 
 	return (
 		<Fragment>
-			<h1 className="text-center mt-5">Food Planner Ingredient List</h1>
-			<div className="text-center mt-5">
-				<button
-					type="button"
-					className="btn btn-primary"
-					data-bs-toggle="modal"
-					data-bs-target="#addIngredientModal"
-				>
-					Add Ingredient
-				</button>
+			<h1 className="mt-5">
+				Food Planner Ingredient List
+				{count !== null && (
+					<span className="badge bg-secondary ms-3 align-middle" style={{ fontSize: "0.5em" }}>{count}</span>
+				)}
+			</h1>
+
+			{/* FAB */}
+			<div style={{ position: "fixed", bottom: "24px", left: 0, right: 0, zIndex: 1040, pointerEvents: "none" }}>
+				<div className="container" style={{ display: "flex", justifyContent: "flex-end" }}>
+					<button
+						type="button"
+						data-bs-toggle="modal"
+						data-bs-target="#addIngredientModal"
+						aria-label="Add Ingredient"
+						style={{
+							pointerEvents: "all",
+							width: "56px",
+							height: "56px",
+							borderRadius: "50%",
+							backgroundColor: "#1565c0",
+							color: "white",
+							fontSize: "28px",
+							lineHeight: "1",
+							border: "none",
+							cursor: "pointer",
+							boxShadow: "0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15)",
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						+
+					</button>
+				</div>
 			</div>
 
 			{/* Modal */}
