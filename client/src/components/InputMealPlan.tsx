@@ -11,7 +11,7 @@ const InputMealPlan: React.FC = () => {
 		try {
 			const body = { name };
 			await axios.post("/api/meal-plans", body);
-			window.location.href = "/";
+			window.location.reload();
 		} catch (err: any) {
 			console.error(err.message);
 			if (err.response?.data) {
@@ -27,7 +27,7 @@ const InputMealPlan: React.FC = () => {
 		try {
 			const body = { name };
 			await axios.post("/api/meal-plans/random", body);
-			window.location.href = "/";
+			window.location.reload();
 		} catch (err: any) {
 			console.error(err.message);
 			if (err.response?.data) {

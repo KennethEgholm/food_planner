@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface MealPlan {
 	id: number;
@@ -28,6 +29,9 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 	const [days, setDays] = useState<MealPlanDay[]>([]);
 	const [snacks, setSnacks] = useState<MealPlanSnack[]>([]);
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+	const modalRef = useRef<HTMLDivElement>(null);
+	const { id: urlId } = useParams<{ id: string }>();
+	const navigate = useNavigate();
 
 	const getMealPlanDetails = useCallback(async () => {
 		try {
@@ -39,14 +43,33 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 		}
 	}, [mealPlan.id]);
 
+	// Auto-open modal and update URL when this plan is deep-linked
+	useEffect(() => {
+		const el = modalRef.current;
+		if (!el || !urlId || Number(urlId) !== mealPlan.id) return;
+
+		const bsWindow = window as any;
+		if (!bsWindow.bootstrap) return;
+
+		getMealPlanDetails();
+		const modal = bsWindow.bootstrap.Modal.getOrCreateInstance(el);
+		modal.show();
+
+		const handleHide = () => {
+			navigate("/plans", { replace: true });
+		};
+		el.addEventListener("hidden.bs.modal", handleHide, { once: true });
+		return () => {
+			el.removeEventListener("hidden.bs.modal", handleHide);
+		};
+	}, [urlId, mealPlan.id, getMealPlanDetails, navigate]);
+
 	return (
 		<>
 			<button
 				type="button"
 				className="btn btn-link text-decoration-none"
-				data-bs-toggle="modal"
-				data-bs-target={`#showMealPlan${mealPlan.id}`}
-				onClick={() => getMealPlanDetails()}
+				onClick={() => navigate(`/plans/${mealPlan.id}`)}
 			>
 				{mealPlan.name}
 			</button>
@@ -56,6 +79,7 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 				className="modal fade"
 				id={`showMealPlan${mealPlan.id}`}
 				tabIndex={-1}
+				ref={modalRef}
 			>
 				<div className="modal-dialog modal-lg">
 					<div className="modal-content">

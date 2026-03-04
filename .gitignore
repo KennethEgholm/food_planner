@@ -7,3 +7,4 @@ build
 pgdata
 server/uploads
 *.jpg
+backups/

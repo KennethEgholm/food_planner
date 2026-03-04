@@ -29,6 +29,42 @@ Find the Audience Tag in the Cloudflare Zero Trust dashboard → Access → Appl
 ## Google Tasks API Integration
 This project is created on my personal google account: https://console.cloud.google.com/auth/overview?project=foodplanning-488211
 
+## Routing & Deep Linking
+
+The app uses client-side routing (`react-router-dom`). Each tab has its own URL:
+
+| URL | Content |
+|---|---|
+| `/plans` | Meal Plans tab |
+| `/plans/:id` | Meal Plans tab — auto-opens the modal for plan `id` |
+| `/meals` | Meals tab |
+| `/snacks` | Snacks tab |
+| `/ingredients` | Ingredients tab |
+
+Navigating directly to `/plans/42` will load the plans list and immediately open the detail modal for plan 42. Closing the modal navigates back to `/plans`.
+
+Nginx is already configured with `try_files ... /index.html` so all routes are served correctly in production.
+
+### Deploy to production
+Use the `deploy.sh` script instead of calling `docker compose` directly. It automatically backs up the database before deploying:
+
+```bash
+./deploy.sh
+```
+
+What it does:
+1. Dumps the running PostgreSQL database to `backups/food_planner_<timestamp>.sql.gz`
+2. Retains the 10 most recent backups (older ones are pruned automatically)
+3. Runs `docker compose -f docker-compose.prod.yml up --build -d`
+
+If the database container is not running (e.g. first ever deploy), it asks for confirmation before proceeding without a backup.
+
+To restore from a backup:
+```bash
+gunzip -c backups/food_planner_<timestamp>.sql.gz | \
+  docker exec -i food_planner_db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
+```
+
 ### Run the app locally:
 - cd client && npm run dev
 - cd server && npm run dev

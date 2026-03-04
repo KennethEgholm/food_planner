@@ -42,6 +42,21 @@ Food Planner is a web application designed to help users plan their meals for th
 - Typescript is used for both frontend and backend development to ensure type safety and improve code quality.
 - Application is containerized using Docker to ensure consistency across different environments and simplify deployment.
 
+## Routing & Deep Linking
+
+The app uses `react-router-dom` (v6) with `BrowserRouter` for client-side routing. Tab navigation is URL-based, enabling bookmarking and sharing.
+
+| URL | Behaviour |
+|---|---|
+| `/` | Redirects to `/plans` |
+| `/plans` | Meal Plans tab |
+| `/plans/:id` | Meal Plans tab with the specified plan's modal auto-opened |
+| `/meals` | Meals tab |
+| `/snacks` | Snacks tab |
+| `/ingredients` | Ingredients tab |
+
+Deep linking to a meal plan (`/plans/:id`) opens the plan's detail modal automatically and navigates back to `/plans` when the modal is closed. Clicking a plan name in the list updates the URL to `/plans/:id`, making the link shareable.
+
 ## Authorization
 
 ### Overview

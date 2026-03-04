@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { Toaster } from "react-hot-toast";
+import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import "./App.css";
 
 //components
@@ -13,88 +13,89 @@ import MealForm from "./components/MealForm";
 import SnackForm from "./components/SnackForm";
 
 function App() {
-	const [activeTab, setActiveTab] = useState(
-		localStorage.getItem("activeTab") || "plans",
-	);
-
-	const handleTabChange = (tab) => {
-		setActiveTab(tab);
-		localStorage.setItem("activeTab", tab);
-	};
+	const navLinkClass = ({ isActive }) => `nav-link ${isActive ? "active" : ""}`;
 
 	return (
 		<div className="container">
 			<Toaster position="top-center" />
 			<ul className="nav nav-tabs mt-5">
 				<li className="nav-item">
-					<button
-						className={`nav-link ${activeTab === "plans" ? "active" : ""}`}
-						onClick={() => handleTabChange("plans")}
-						type="button"
-					>
+					<NavLink className={navLinkClass} to="/plans">
 						Meal Plans
-					</button>
+					</NavLink>
 				</li>
 				<li className="nav-item">
-					<button
-						className={`nav-link ${activeTab === "meals" ? "active" : ""}`}
-						onClick={() => handleTabChange("meals")}
-						type="button"
-					>
+					<NavLink className={navLinkClass} to="/meals" end>
 						Meals
-					</button>
+					</NavLink>
 				</li>
 				<li className="nav-item">
-					<button
-						className={`nav-link ${activeTab === "snacks" ? "active" : ""}`}
-						onClick={() => handleTabChange("snacks")}
-						type="button"
-					>
+					<NavLink className={navLinkClass} to="/snacks" end>
 						Snacks
-					</button>
+					</NavLink>
 				</li>
 				<li className="nav-item">
-					<button
-						className={`nav-link ${activeTab === "ingredients" ? "active" : ""}`}
-						onClick={() => handleTabChange("ingredients")}
-						type="button"
-					>
+					<NavLink className={navLinkClass} to="/ingredients" end>
 						Ingredients
-					</button>
+					</NavLink>
 				</li>
 			</ul>
 
 			<div className="tab-content mt-3">
-				{activeTab === "plans" && (
-					<div className="tab-pane fade show active">
-						<InputMealPlan />
-						<ListMealPlans />
-					</div>
-				)}
-				{activeTab === "meals" && (
-					<div className="tab-pane fade show active">
-						<div className="text-center mt-5 mb-5">
-							<h1 className="mb-4">Food Planner Meal List</h1>
-							<MealForm />
-						</div>
-						<ListMeals />
-					</div>
-				)}
-				{activeTab === "snacks" && (
-					<div className="tab-pane fade show active">
-						<div className="text-center mt-5 mb-5">
-							<h1 className="mb-4">Food Planner Snack List</h1>
-							<SnackForm />
-						</div>
-						<ListSnacks />
-					</div>
-				)}
-				{activeTab === "ingredients" && (
-					<div className="tab-pane fade show active">
-						<InputIngredient />
-						<ListIngredients />
-					</div>
-				)}
+				<Routes>
+					<Route path="/" element={<Navigate to="/plans" replace />} />
+					<Route
+						path="/plans"
+						element={
+							<div className="tab-pane fade show active">
+								<InputMealPlan />
+								<ListMealPlans />
+							</div>
+						}
+					/>
+					<Route
+						path="/plans/:id"
+						element={
+							<div className="tab-pane fade show active">
+								<InputMealPlan />
+								<ListMealPlans />
+							</div>
+						}
+					/>
+					<Route
+						path="/meals"
+						element={
+							<div className="tab-pane fade show active">
+								<div className="text-center mt-5 mb-5">
+									<h1 className="mb-4">Food Planner Meal List</h1>
+									<MealForm />
+								</div>
+								<ListMeals />
+							</div>
+						}
+					/>
+					<Route
+						path="/snacks"
+						element={
+							<div className="tab-pane fade show active">
+								<div className="text-center mt-5 mb-5">
+									<h1 className="mb-4">Food Planner Snack List</h1>
+									<SnackForm />
+								</div>
+								<ListSnacks />
+							</div>
+						}
+					/>
+					<Route
+						path="/ingredients"
+						element={
+							<div className="tab-pane fade show active">
+								<InputIngredient />
+								<ListIngredients />
+							</div>
+						}
+					/>
+				</Routes>
 			</div>
 		</div>
 	);

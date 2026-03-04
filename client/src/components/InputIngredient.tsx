@@ -13,7 +13,7 @@ const InputIngredient: React.FC = () => {
 		try {
 			const body = { name, unit };
 			await axios.post("/api/ingredients", body);
-			window.location.href = "/";
+			window.location.reload();
 		} catch (err: any) {
 			console.error(err.message);
 		}
