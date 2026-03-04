@@ -1,15 +1,16 @@
 {
-  "name": "food_planner",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "pg": "^8.18.0"
-  }
+	"name": "food_planner",
+	"version": "1.0.0",
+	"main": "index.js",
+	"scripts": {
+		"deploy": "bash ./deploy.sh",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"description": "",
+	"dependencies": {
+		"pg": "^8.18.0"
+	}
 }
