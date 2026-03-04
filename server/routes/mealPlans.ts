@@ -1,12 +1,13 @@
 import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
 import { prisma } from "../db";
+import { requireAdmin } from "../middleware/auth";
 import { getAuthenticatedClient } from "./auth";
 
 const router = Router();
 
-// Create a meal plan
-router.post("/", async (req: Request, res: Response) => {
+// Create a meal plan (admin only)
+router.post("/", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { name } = req.body;
 		if (!name) {
@@ -27,8 +28,8 @@ router.post("/", async (req: Request, res: Response) => {
 	}
 });
 
-// Create a random meal plan
-router.post("/random", async (req: Request, res: Response) => {
+// Create a random meal plan (admin only)
+router.post("/random", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { name } = req.body;
 		if (!name) {
@@ -211,43 +212,51 @@ router.get("/:id", async (req: Request, res: Response) => {
 	}
 });
 
-// Add a snack to a meal plan
-router.post("/:id/snacks", async (req: Request, res: Response) => {
-	try {
-		const { id } = req.params;
-		const { snack_id } = req.body;
+// Add a snack to a meal plan (admin only)
+router.post(
+	"/:id/snacks",
+	requireAdmin,
+	async (req: Request, res: Response) => {
+		try {
+			const { id } = req.params;
+			const { snack_id } = req.body;
 
-		if (!snack_id) {
-			return res.status(400).json("Snack ID is required");
+			if (!snack_id) {
+				return res.status(400).json("Snack ID is required");
+			}
+
+			const newLink = await prisma.meal_plan_snacks.create({
+				data: {
+					meal_plan_id: Number.parseInt(id as string, 10),
+					snack_id: Number.parseInt(snack_id, 10),
+				},
+			});
+
+			res.json(newLink);
+		} catch (err: unknown) {
+			if (err instanceof Error) console.error(err.message);
+			res.status(500).send("Server Error");
 		}
+	},
+);
 
-		const newLink = await prisma.meal_plan_snacks.create({
-			data: {
-				meal_plan_id: Number.parseInt(id as string, 10),
-				snack_id: Number.parseInt(snack_id, 10),
-			},
-		});
-
-		res.json(newLink);
-	} catch (err: unknown) {
-		if (err instanceof Error) console.error(err.message);
-		res.status(500).send("Server Error");
-	}
-});
-
-// Remove a snack from a meal plan
-router.delete("/:id/snacks/:linkId", async (req: Request, res: Response) => {
-	try {
-		const { linkId } = req.params;
-		await prisma.meal_plan_snacks.delete({
-			where: { id: Number.parseInt(linkId as string, 10) },
-		});
-		res.json("Snack removed from plan");
-	} catch (err: unknown) {
-		if (err instanceof Error) console.error(err.message);
-		res.status(500).send("Server Error");
-	}
-});
+// Remove a snack from a meal plan (admin only)
+router.delete(
+	"/:id/snacks/:linkId",
+	requireAdmin,
+	async (req: Request, res: Response) => {
+		try {
+			const { linkId } = req.params;
+			await prisma.meal_plan_snacks.delete({
+				where: { id: Number.parseInt(linkId as string, 10) },
+			});
+			res.json("Snack removed from plan");
+		} catch (err: unknown) {
+			if (err instanceof Error) console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
 
 // Get shopping list for a meal plan (including snacks)
 router.get("/:id/shopping-list", async (req: Request, res: Response) => {
@@ -288,9 +297,10 @@ router.get("/:id/shopping-list", async (req: Request, res: Response) => {
 	}
 });
 
-// Export shopping list to Google Tasks
+// Export shopping list to Google Tasks (admin only)
 router.post(
 	"/:id/shopping-list/export",
+	requireAdmin,
 	async (req: Request, res: Response) => {
 		try {
 			const { id } = req.params;
@@ -379,8 +389,8 @@ router.post(
 	},
 );
 
-// Update days in a meal plan (Set a meal for a day)
-router.put("/:id/days", async (req: Request, res: Response) => {
+// Update days in a meal plan (admin only)
+router.put("/:id/days", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 		const planId = Number.parseInt(id as string, 10);
@@ -414,8 +424,8 @@ router.put("/:id/days", async (req: Request, res: Response) => {
 	}
 });
 
-// Delete a meal plan
-router.delete("/:id", async (req: Request, res: Response) => {
+// Delete a meal plan (admin only)
+router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 		await prisma.meal_plans.delete({

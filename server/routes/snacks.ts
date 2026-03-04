@@ -3,6 +3,7 @@ import path from "node:path";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
 import { prisma } from "../db";
+import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -19,9 +20,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Create a snack
+// Create a snack (admin only)
 router.post(
 	"/",
+	requireAdmin,
 	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
@@ -67,9 +69,10 @@ router.get("/", async (_req: Request, res: Response) => {
 	}
 });
 
-// Update a snack
+// Update a snack (admin only)
 router.put(
 	"/:id",
+	requireAdmin,
 	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
@@ -108,9 +111,10 @@ router.put(
 	},
 );
 
-// Delete a single image from a snack
+// Delete a single image from a snack (admin only)
 router.delete(
 	"/:id/images/:imageId",
+	requireAdmin,
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { imageId } = req.params;
@@ -135,27 +139,31 @@ router.delete(
 	},
 );
 
-// Delete a snack
-router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
-	try {
-		const { id } = req.params;
-		const images = await prisma.snack_images.findMany({
-			where: { snack_id: Number(id) },
-		});
-		await prisma.snacks.delete({
-			where: { id: Number(id) },
-		});
-		for (const img of images) {
-			fs.unlink(img.path, (err) => {
-				if (err) console.error("Failed to delete image file:", err.message);
+// Delete a snack (admin only)
+router.delete(
+	"/:id",
+	requireAdmin,
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { id } = req.params;
+			const images = await prisma.snack_images.findMany({
+				where: { snack_id: Number(id) },
 			});
+			await prisma.snacks.delete({
+				where: { id: Number(id) },
+			});
+			for (const img of images) {
+				fs.unlink(img.path, (err) => {
+					if (err) console.error("Failed to delete image file:", err.message);
+				});
+			}
+			res.json("Snack was deleted!");
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
 		}
-		res.json("Snack was deleted!");
-	} catch (err: any) {
-		console.error(err.message);
-		res.status(500).send("Server Error");
-	}
-});
+	},
+);
 
 // Get ingredients for a snack
 router.get("/:id/ingredients", async (req: Request, res: Response) => {
@@ -182,30 +190,35 @@ router.get("/:id/ingredients", async (req: Request, res: Response) => {
 	}
 });
 
-// Add ingredient to snack
-router.post("/:id/ingredients", async (req: Request, res: Response) => {
-	try {
-		const { id } = req.params;
-		const { ingredient_id, quantity } = req.body;
+// Add ingredient to snack (admin only)
+router.post(
+	"/:id/ingredients",
+	requireAdmin,
+	async (req: Request, res: Response) => {
+		try {
+			const { id } = req.params;
+			const { ingredient_id, quantity } = req.body;
 
-		await prisma.snack_ingredients.create({
-			data: {
-				snack_id: Number(id),
-				ingredient_id: Number(ingredient_id),
-				quantity: Number(quantity),
-			},
-		});
+			await prisma.snack_ingredients.create({
+				data: {
+					snack_id: Number(id),
+					ingredient_id: Number(ingredient_id),
+					quantity: Number(quantity),
+				},
+			});
 
-		res.json("Ingredient added to snack");
-	} catch (err: any) {
-		console.error(err.message);
-		res.status(500).send("Server Error");
-	}
-});
+			res.json("Ingredient added to snack");
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
 
-// Remove ingredient from snack
+// Remove ingredient from snack (admin only)
 router.delete(
 	"/:id/ingredients/:ingredientId",
+	requireAdmin,
 	async (req: Request, res: Response) => {
 		try {
 			const { id, ingredientId } = req.params;

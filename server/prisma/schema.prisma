@@ -7,6 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  USER
+}
+
+model users {
+  email      String   @id @db.VarChar(255)
+  role       Role     @default(USER)
+  created_at DateTime @default(now())
+}
+
 model app_settings {
   key   String  @id @db.VarChar(255)
   value String?

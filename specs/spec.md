@@ -42,6 +42,44 @@ Food Planner is a web application designed to help users plan their meals for th
 - Typescript is used for both frontend and backend development to ensure type safety and improve code quality.
 - Application is containerized using Docker to ensure consistency across different environments and simplify deployment.
 
+## Authorization
+
+### Overview
+The app uses a two-tier role system:
+
+| Role | Permissions |
+|------|-------------|
+| `ADMIN` | Full CRUD access to all resources |
+| `USER` | Read-only access (GET endpoints only) |
+
+### Authentication & Identity
+Authentication is handled entirely by **Cloudflare Access** in front of the app, using Google as the OAuth identity provider. Users must pass through Cloudflare before reaching the application. Cloudflare injects a signed JWT (`CF-Access-Jwt-Assertion` request header) that the server verifies on every request.
+
+### Authorization Flow
+1. The `verifyCloudflareJWT` Express middleware (applied globally in `server/index.ts`) verifies the Cloudflare JWT using Cloudflare's public JWKS endpoint.
+2. The user's email is extracted from the verified token and used to look up or create a `users` record in the database.
+3. New users are provisioned with the `USER` role by default. The `BOOTSTRAP_ADMIN_EMAIL` environment variable grants `ADMIN` role on first login.
+4. `req.user` is populated with `{ email, role }` for downstream route handlers.
+5. Write endpoints (POST, PUT, DELETE) additionally require the `requireAdmin` middleware, which returns `403` for non-admin users.
+
+### Database
+User records are stored in a `users` table:
+- `email` (primary key, from Cloudflare JWT)
+- `role` (enum: `ADMIN` | `USER`, default `USER`)
+- `created_at`
+
+Admin users can be managed directly in the database (or via a future admin API).
+
+### Environment Variables
+| Variable | Purpose |
+|---|---|
+| `CF_TEAM_DOMAIN` | Your Cloudflare Access team domain (e.g. `myteam.cloudflareaccess.com`) |
+| `CF_AUD` | Cloudflare Access Application Audience Tag |
+| `BOOTSTRAP_ADMIN_EMAIL` | Email address that receives `ADMIN` role on first login |
+
+### Development (Local)
+In `NODE_ENV !== "production"`, Cloudflare JWT verification is bypassed. The email in `BOOTSTRAP_ADMIN_EMAIL` (or `dev@localhost` if unset) is used as a mock admin user, upserted automatically.
+
 ## User Stories
 1. As a user, I want to create a meal plan for the week so that I can organize my meals.
 2. As a user, I want to add meals to my meal plan so that I can specify what I will eat each day.

@@ -2,6 +2,7 @@ import path from "node:path";
 import cors from "cors";
 import dotenv from "dotenv";
 import express, { type Express, type Request, type Response } from "express";
+import { verifyCloudflareJWT } from "./middleware/auth";
 import authRoutes from "./routes/auth";
 import ingredientRoutes from "./routes/ingredients";
 import mealPlanRoutes from "./routes/mealPlans";
@@ -16,6 +17,9 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+
+// Verify Cloudflare Access JWT on every request and attach req.user
+app.use(verifyCloudflareJWT);
 
 app.get("/", (_req: Request, res: Response) => {
 	res.send("Food Planner API is running");

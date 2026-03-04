@@ -3,6 +3,7 @@ import path from "node:path";
 import express, { type Request, type Response } from "express";
 import multer from "multer";
 import { prisma } from "../db";
+import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -20,9 +21,10 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-// Create a meal
+// Create a meal (admin only)
 router.post(
 	"/",
+	requireAdmin,
 	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
@@ -73,9 +75,10 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 	}
 });
 
-// Update a meal
+// Update a meal (admin only)
 router.put(
 	"/:id",
+	requireAdmin,
 	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
@@ -122,9 +125,10 @@ router.put(
 	},
 );
 
-// Delete a single image from a meal
+// Delete a single image from a meal (admin only)
 router.delete(
 	"/:id/images/:imageId",
+	requireAdmin,
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { imageId } = req.params;
@@ -149,27 +153,31 @@ router.delete(
 	},
 );
 
-// Delete a meal
-router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
-	try {
-		const { id } = req.params;
-		const images = await prisma.meal_images.findMany({
-			where: { meal_id: Number(id) },
-		});
-		await prisma.meals.delete({
-			where: { id: Number(id) },
-		});
-		for (const img of images) {
-			fs.unlink(img.path, (err) => {
-				if (err) console.error("Failed to delete image file:", err.message);
+// Delete a meal (admin only)
+router.delete(
+	"/:id",
+	requireAdmin,
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { id } = req.params;
+			const images = await prisma.meal_images.findMany({
+				where: { meal_id: Number(id) },
 			});
+			await prisma.meals.delete({
+				where: { id: Number(id) },
+			});
+			for (const img of images) {
+				fs.unlink(img.path, (err) => {
+					if (err) console.error("Failed to delete image file:", err.message);
+				});
+			}
+			res.json("Meal was deleted!");
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
 		}
-		res.json("Meal was deleted!");
-	} catch (err: any) {
-		console.error(err.message);
-		res.status(500).send("Server Error");
-	}
-});
+	},
+);
 
 // Get ingredients for a meal
 router.get(
@@ -200,9 +208,10 @@ router.get(
 	},
 );
 
-// Add ingredient to meal
+// Add ingredient to meal (admin only)
 router.post(
 	"/:id/ingredients",
+	requireAdmin,
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;
@@ -223,9 +232,10 @@ router.post(
 	},
 );
 
-// Update ingredient quantity in meal
+// Update ingredient quantity in meal (admin only)
 router.put(
 	"/:id/ingredients/:ingredientId",
+	requireAdmin,
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id, ingredientId } = req.params;
@@ -250,9 +260,10 @@ router.put(
 	},
 );
 
-// Remove ingredient from meal
+// Remove ingredient from meal (admin only)
 router.delete(
 	"/:id/ingredients/:ingredientId",
+	requireAdmin,
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id, ingredientId } = req.params;

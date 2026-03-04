@@ -1,12 +1,13 @@
 import express, { type Request, type Response } from "express";
 import { prisma } from "../db";
+import { requireAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
 const validUnits = ["gram", "centiliter", "deciliter", "stk"];
 
-// Create an ingredient
-router.post("/", async (req: Request, res: Response) => {
+// Create an ingredient (admin only)
+router.post("/", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { name, unit } = req.body;
 
@@ -38,8 +39,8 @@ router.get("/", async (_req: Request, res: Response) => {
 	}
 });
 
-// Update an ingredient
-router.put("/:id", async (req: Request, res: Response) => {
+// Update an ingredient (admin only)
+router.put("/:id", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 		const { name, unit } = req.body;
@@ -61,8 +62,8 @@ router.put("/:id", async (req: Request, res: Response) => {
 	}
 });
 
-// Delete an ingredient
-router.delete("/:id", async (req: Request, res: Response) => {
+// Delete an ingredient (admin only)
+router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 		await prisma.ingredients.delete({
