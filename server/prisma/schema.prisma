@@ -13,14 +13,21 @@ enum Role {
 }
 
 model users {
-  email      String   @id @db.VarChar(255)
-  role       Role     @default(USER)
-  created_at DateTime @default(now())
+  email                String               @id @db.VarChar(255)
+  role                 Role                 @default(USER)
+  created_at           DateTime             @default(now())
+  user_google_tokens   user_google_tokens?
 }
 
 model app_settings {
   key   String  @id @db.VarChar(255)
   value String?
+}
+
+model user_google_tokens {
+  user_email String @id @db.VarChar(255)
+  tokens     String
+  users      users  @relation(fields: [user_email], references: [email], onDelete: Cascade)
 }
 
 model ingredients {

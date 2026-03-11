@@ -333,7 +333,7 @@ router.post(
 			// 2. Authenticate
 			let oauth2Client;
 			try {
-				oauth2Client = await getAuthenticatedClient();
+				oauth2Client = await getAuthenticatedClient(req.user?.email);
 			} catch (_e) {
 				return res
 					.status(401)

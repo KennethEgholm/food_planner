@@ -12,7 +12,8 @@ import snackRoutes from "./routes/snacks";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const app: Express = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.SERVER_PORT;
+if (!PORT) throw new Error("Missing required env var: SERVER_PORT");
 
 app.use(cors());
 app.use(express.json());
