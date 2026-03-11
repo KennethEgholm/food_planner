@@ -86,9 +86,15 @@ router.get("/callback", async (req: Request, res: Response) => {
 
 		console.log(`Tokens saved for user: ${userEmail}`);
 
+		// In production use the public frontend URL; in dev fall back to localhost.
+		const API_URL = process.env.API_URL;
 		const clientPort = process.env.CLIENT_PORT;
-		if (!clientPort) throw new Error("Missing required env var: CLIENT_PORT");
-		res.redirect(`http://localhost:${clientPort}${returnPath}`);
+		const frontendBase = API_URL
+			? API_URL.replace(/\/api\/?$/, "")
+			: `http://localhost:${clientPort}`;
+		if (!API_URL && !clientPort)
+			throw new Error("Missing required env var: CLIENT_PORT");
+		res.redirect(`${frontendBase}${returnPath}`);
 	} catch (err: any) {
 		console.error("Error retrieving access token:", err.message);
 		res.status(500).send("Authentication failed");

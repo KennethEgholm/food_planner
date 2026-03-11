@@ -27,6 +27,7 @@ services:
     ports:
       - "${SERVER_PORT}:5000"
     environment:
+      - NODE_ENV=production
       - SERVER_PORT=5000
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - API_URL=${VITE_API_URL}
