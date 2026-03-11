@@ -1,6 +1,7 @@
 import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
 import { prisma } from "../db";
+import { getUser } from "../middleware/auth";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.get("/url", (req: Request, res: Response) => {
 
 	const returnPath = (req.query.returnPath as string) || "/plans";
 	const state = Buffer.from(
-		JSON.stringify({ email: req.user?.email, returnPath }),
+		JSON.stringify({ email: getUser(req).email, returnPath }),
 	).toString("base64");
 
 	const url = oauth2Client.generateAuthUrl({
@@ -92,7 +93,7 @@ router.get("/callback", async (req: Request, res: Response) => {
 router.get("/status", async (req: Request, res: Response) => {
 	try {
 		const result = await prisma.user_google_tokens.findUnique({
-			where: { user_email: req.user?.email },
+			where: { user_email: getUser(req).email },
 		});
 		res.json({ connected: !!result?.tokens });
 	} catch (err: any) {

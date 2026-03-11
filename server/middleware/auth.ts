@@ -12,6 +12,20 @@ declare global {
 	}
 }
 
+/** Use this type for route handlers that sit behind verifyCloudflareJWT. */
+export type AuthenticatedRequest = Request & {
+	user: { email: string; role: string };
+};
+
+/**
+ * Extracts req.user with a non-optional type. Throws if auth middleware did not run.
+ * Use inside any route handler that sits behind verifyCloudflareJWT.
+ */
+export function getUser(req: Request): { email: string; role: string } {
+	if (!req.user) throw new Error("getUser called on unauthenticated request");
+	return req.user;
+}
+
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const CF_TEAM_DOMAIN = process.env.CF_TEAM_DOMAIN;

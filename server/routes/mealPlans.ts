@@ -1,7 +1,7 @@
 import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
 import { prisma } from "../db";
-import { requireAdmin } from "../middleware/auth";
+import { getUser, requireAdmin } from "../middleware/auth";
 import { getAuthenticatedClient } from "./auth";
 
 const router = Router();
@@ -333,7 +333,7 @@ router.post(
 			// 2. Authenticate
 			let oauth2Client;
 			try {
-				oauth2Client = await getAuthenticatedClient(req.user?.email);
+				oauth2Client = await getAuthenticatedClient(getUser(req).email);
 			} catch (_e) {
 				return res
 					.status(401)
