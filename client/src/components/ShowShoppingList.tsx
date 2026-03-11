@@ -39,13 +39,15 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 			const res = await axios.get("/api/auth/google/status");
 			setIsConnected(res.data.connected);
 			if (!res.data.connected) {
-				const urlRes = await axios.get("/api/auth/google/url");
+				const urlRes = await axios.get("/api/auth/google/url", {
+					params: { returnPath: `/plans/${mealPlan.id}` },
+				});
 				setAuthUrl(urlRes.data.url);
 			}
 		} catch (err: any) {
 			console.error(err.message);
 		}
-	}, []);
+	}, [mealPlan.idmealPlan.idmealPlan.idmealPlan.idmealPlan.id]);
 
 	const exportToGoogleTasks = async () => {
 		try {

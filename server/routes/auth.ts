@@ -23,12 +23,15 @@ function getOAuthClient() {
 	return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 }
 
-// 1. Generate Auth URL — embed requesting user's email in state
+// 1. Generate Auth URL — embed requesting user's email and return path in state
 router.get("/url", (req: Request, res: Response) => {
 	const oauth2Client = getOAuthClient();
 	const scopes = ["https://www.googleapis.com/auth/tasks"];
 
-	const state = Buffer.from(req.user?.email).toString("base64");
+	const returnPath = (req.query.returnPath as string) || "/plans";
+	const state = Buffer.from(
+		JSON.stringify({ email: req.user?.email, returnPath }),
+	).toString("base64");
 
 	const url = oauth2Client.generateAuthUrl({
 		access_type: "offline",
@@ -52,8 +55,11 @@ router.get("/callback", async (req: Request, res: Response) => {
 	}
 
 	let userEmail: string;
+	let returnPath = "/plans";
 	try {
-		userEmail = Buffer.from(state, "base64").toString("utf8");
+		const parsed = JSON.parse(Buffer.from(state, "base64").toString("utf8"));
+		userEmail = parsed.email;
+		returnPath = parsed.returnPath || "/plans";
 	} catch {
 		return res.status(400).send("Invalid state parameter");
 	}
@@ -75,7 +81,7 @@ router.get("/callback", async (req: Request, res: Response) => {
 
 		const clientPort = process.env.CLIENT_PORT;
 		if (!clientPort) throw new Error("Missing required env var: CLIENT_PORT");
-		res.redirect(`http://localhost:${clientPort}`);
+		res.redirect(`http://localhost:${clientPort}${returnPath}`);
 	} catch (err: any) {
 		console.error("Error retrieving access token:", err.message);
 		res.status(500).send("Authentication failed");
