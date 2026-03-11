@@ -19,12 +19,12 @@ app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// Google OAuth callback is exempt from CF JWT auth — it is secured by
-// Google's one-time code + signed state parameter instead.
-app.use("/auth/google/callback", authRoutes);
-
-// Verify Cloudflare Access JWT on every other request and attach req.user
-app.use(verifyCloudflareJWT);
+// Google OAuth callback is exempt from CF JWT auth — secured by Google's one-time
+// code + signed state instead. Skip JWT verification for that path only.
+app.use((req, res, next) => {
+	if (req.path === "/auth/google/callback") return next();
+	return verifyCloudflareJWT(req, res, next);
+});
 
 app.get("/", (_req: Request, res: Response) => {
 	res.send("Food Planner API is running");
