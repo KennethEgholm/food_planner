@@ -19,7 +19,12 @@ function getOAuthClient() {
 		throw new Error("Missing required env var: API_URL (or SERVER_PORT)");
 
 	const BASE_URL = API_URL || `http://localhost:${SERVER_PORT}`;
-	const REDIRECT_URI = `${BASE_URL}/auth/google/callback`;
+	// In production the callback goes through nginx, which requires the /api/ prefix.
+	// In dev the server is hit directly so no prefix is needed.
+	const callbackPath = API_URL
+		? "/api/auth/google/callback"
+		: "/auth/google/callback";
+	const REDIRECT_URI = `${BASE_URL}${callbackPath}`;
 
 	return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
 }
