@@ -94,7 +94,7 @@ export const verifyCloudflareJWT = async (
 		const role = email === BOOTSTRAP_ADMIN_EMAIL ? "ADMIN" : "USER";
 		const user = await prisma.users.upsert({
 			where: { email },
-			update: {},
+			update: email === BOOTSTRAP_ADMIN_EMAIL ? { role: "ADMIN" } : {},
 			create: { email, role },
 		}).catch(async () => {
 			// Prisma upsert can still hit a unique constraint under high concurrency.
