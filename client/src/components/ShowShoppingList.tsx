@@ -47,7 +47,7 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		} catch (err: any) {
 			console.error(err.message);
 		}
-	}, [mealPlan.idmealPlan.idmealPlan.idmealPlan.idmealPlan.id]);
+	}, [mealPlan.id]);
 
 	const exportToGoogleTasks = async () => {
 		try {

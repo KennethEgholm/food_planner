@@ -90,12 +90,15 @@ export const verifyCloudflareJWT = async (
 		}
 
 		// Look up user; on first seen, create with default USER role
-		// unless the email matches the bootstrap admin
-		let user = await prisma.users.findUnique({ where: { email } });
-		if (!user) {
-			const role = email === BOOTSTRAP_ADMIN_EMAIL ? "ADMIN" : "USER";
-			user = await prisma.users.create({ data: { email, role } });
-		}
+		// unless the email matches the bootstrap admin.
+		// upsert avoids a race condition when two concurrent requests arrive
+		// for the same first-time user.
+		const role = email === BOOTSTRAP_ADMIN_EMAIL ? "ADMIN" : "USER";
+		const user = await prisma.users.upsert({
+			where: { email },
+			update: {},
+			create: { email, role },
+		});
 
 		req.user = { email: user.email, role: user.role };
 		next();
