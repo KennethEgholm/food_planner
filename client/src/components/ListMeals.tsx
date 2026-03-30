@@ -13,6 +13,7 @@ interface Meal {
 	id: number;
 	name: string;
 	suitable_for_weekend: number | boolean;
+	representative_image?: string | null;
 	meal_images?: MealImage[];
 }
 
@@ -56,12 +57,12 @@ const ListMeals: React.FC = () => {
 					{meals.map((meal) => (
 						<tr key={meal.id}>
 							<td>
-								{meal.meal_images && meal.meal_images.length > 0 && (
+								{(meal.representative_image ?? meal.meal_images?.[0]?.path) && (
 									<div
 										style={{ position: "relative", display: "inline-block" }}
 									>
 										<img
-											src={`/${meal.meal_images[0].path}`}
+											src={`/${meal.representative_image ?? meal.meal_images?.[0]?.path}`}
 											alt={meal.name}
 											style={{
 												width: "50px",
@@ -70,10 +71,10 @@ const ListMeals: React.FC = () => {
 												cursor: "pointer",
 											}}
 											onClick={() =>
-												setFullScreenImage(`/${meal.meal_images?.[0].path}`)
+												setFullScreenImage(`/${meal.representative_image ?? meal.meal_images?.[0]?.path}`)
 											}
 										/>
-										{meal.meal_images.length > 1 && (
+										{(meal.meal_images?.length ?? 0) > 1 && (
 											<span
 												className="badge bg-secondary"
 												style={{
@@ -83,7 +84,7 @@ const ListMeals: React.FC = () => {
 													fontSize: "9px",
 												}}
 											>
-												+{meal.meal_images.length - 1}
+												+{(meal.meal_images?.length ?? 0) - 1}
 											</span>
 										)}
 									</div>

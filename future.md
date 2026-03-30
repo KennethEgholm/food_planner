@@ -1,0 +1,5 @@
+# Ideas for the fututre of this project:
+    - Add a button in the "Add Meal Plan" modal, saying: "AI Create". This will generate a meal plan where an AI model is asked to put the plan together based on a "preference setting" in the settings page, and the existing Meal Plans as context. The "preference setting" can be used to influence which meals are apppropriate for the different seasons of the year, and weekend/weekday.
+    - Create a "current meal plan" setting on a mealplan. Only one meal plan can be the "current meal plan". This will be used to show the current meal plan on the homepage, and also to use it as context for the AI model when generating a new meal plan. 
+    - Create a "Current Meal Plan"page, where the meal plan can be viewed with only images of the meals. If no image exist for a meal, an image will be created by an AI model, based on the name of the meal and the ingredients.
+    

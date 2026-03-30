@@ -5,6 +5,7 @@ import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import "./App.css";
 
 //components
+import CurrentMealPlan from "./components/CurrentMealPlan";
 import InputIngredient from "./components/InputIngredient";
 import InputMealPlan from "./components/InputMealPlan";
 import ListIngredients from "./components/ListIngredients";
@@ -35,6 +36,11 @@ function App() {
 			<Toaster position="top-center" />
 			<ul className="nav nav-tabs mt-5">
 				<li className="nav-item">
+					<NavLink className={navLinkClass} to="/current-plan">
+						Current Plan
+					</NavLink>
+				</li>
+				<li className="nav-item">
 					<NavLink className={navLinkClass} to="/plans">
 						Meal Plans
 					</NavLink>
@@ -58,7 +64,15 @@ function App() {
 
 			<div className="tab-content mt-3">
 				<Routes>
-					<Route path="/" element={<Navigate to="/plans" replace />} />
+					<Route path="/" element={<Navigate to="/current-plan" replace />} />
+					<Route
+						path="/current-plan"
+						element={
+							<div className="tab-pane fade show active">
+								<CurrentMealPlan />
+							</div>
+						}
+					/>
 					<Route
 						path="/plans"
 						element={

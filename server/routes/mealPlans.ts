@@ -148,6 +148,62 @@ router.get("/", async (_req: Request, res: Response) => {
 	}
 });
 
+// Get the current meal plan (with days and snacks)
+router.get("/current", async (_req: Request, res: Response) => {
+	try {
+		const plan = await prisma.meal_plans.findFirst({
+			where: { is_current: true },
+		});
+
+		if (!plan) {
+			return res.status(404).json("No current meal plan set");
+		}
+
+		const daysRaw = await prisma.meal_plan_days.findMany({
+			where: { meal_plan_id: plan.id },
+			include: {
+				meals: true,
+			},
+		});
+
+		const dayOrder: { [key: string]: number } = {
+			Monday: 1,
+			Tuesday: 2,
+			Wednesday: 3,
+			Thursday: 4,
+			Friday: 5,
+			Saturday: 6,
+			Sunday: 7,
+		};
+
+		const sortedDays = daysRaw
+			.map((d: any) => ({
+				day: d.day,
+				meal_id: d.meal_id,
+				meal_name: d.meals?.name,
+				meal_image: d.meals?.representative_image ?? null,
+			}))
+			.sort(
+				(a: any, b: any) => (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0),
+			);
+
+		const snacks = await prisma.meal_plan_snacks.findMany({
+			where: { meal_plan_id: plan.id },
+			include: { snacks: true },
+		});
+		const formattedSnacks = snacks.map((s: any) => ({
+			link_id: s.id,
+			id: s.snack_id,
+			name: s.snacks?.name,
+		}));
+
+		res.json({ ...plan, days: sortedDays, snacks: formattedSnacks });
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error(err.message);
+		res.status(500).send("Server Error");
+	}
+});
+
 // Get a specific meal plan (with days)
 router.get("/:id", async (req: Request, res: Response) => {
 	try {
@@ -437,5 +493,29 @@ router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
 		res.status(500).send("Server Error");
 	}
 });
+
+// Set a meal plan as the current one (admin only)
+router.put(
+	"/:id/set-current",
+	requireAdmin,
+	async (req: Request, res: Response) => {
+		try {
+			const planId = Number.parseInt(req.params.id as string, 10);
+
+			await prisma.$transaction([
+				prisma.meal_plans.updateMany({ data: { is_current: false } }),
+				prisma.meal_plans.update({
+					where: { id: planId },
+					data: { is_current: true },
+				}),
+			]);
+
+			res.json("Current meal plan updated");
+		} catch (err: unknown) {
+			if (err instanceof Error) console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
 
 export default router;

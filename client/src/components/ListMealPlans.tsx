@@ -8,6 +8,7 @@ import ShowShoppingList from "./ShowShoppingList";
 interface MealPlan {
 	id: number;
 	name: string;
+	is_current: boolean;
 }
 
 const ListMealPlans: React.FC = () => {
@@ -31,6 +32,15 @@ const ListMealPlans: React.FC = () => {
 		}
 	};
 
+	const setCurrentPlan = async (id: number) => {
+		try {
+			await axios.put(`/api/meal-plans/${id}/set-current`);
+			setPlans(plans.map((plan) => ({ ...plan, is_current: plan.id === id })));
+		} catch (err: any) {
+			console.error(err.message);
+		}
+	};
+
 	useEffect(() => {
 		getPlans();
 	}, [getPlans]);
@@ -48,12 +58,25 @@ const ListMealPlans: React.FC = () => {
 					<tr key={plan.id}>
 						<td>
 							<ShowMealPlan mealPlan={plan} />
+							{plan.is_current && (
+								<span className="badge bg-success ms-2">Current</span>
+							)}
 						</td>
 						<td>
 							<div className="d-flex justify-content-center gap-2">
 								<EditMealPlan mealPlan={plan} />
 								<ShowShoppingList mealPlan={plan} />
+								{!plan.is_current && (
+									<button
+										type="button"
+										className="btn btn-outline-success btn-sm"
+										onClick={() => setCurrentPlan(plan.id)}
+									>
+										Set as Current
+									</button>
+								)}
 								<button
+									type="button"
 									className="btn btn-danger"
 									onClick={() => deletePlan(plan.id)}
 								>

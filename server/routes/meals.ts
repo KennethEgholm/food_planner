@@ -21,6 +21,56 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Fire-and-forget: generate a representative image via xAI if none exists
+async function generateRepresentativeImageIfMissing(mealId: number): Promise<void> {
+	const meal = await prisma.meals.findUnique({
+		where: { id: mealId },
+		include: { meal_ingredients: { include: { ingredients: true } } },
+	});
+	if (!meal || meal.representative_image) return;
+
+	const xaiApiKey = process.env.XAI_API_KEY;
+	if (!xaiApiKey) return;
+
+	const ingredientList = meal.meal_ingredients
+		.map((mi: any) => mi.ingredients.name)
+		.join(", ");
+	const prompt = ingredientList
+		? `A delicious plate of ${meal.name}, made with ${ingredientList}. Food photography, appetizing, well-lit.`
+		: `A delicious plate of ${meal.name}. Food photography, appetizing, well-lit.`;
+
+	try {
+		const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${xaiApiKey}`,
+			},
+			body: JSON.stringify({ model: "grok-imagine-image", prompt, n: 1 }),
+		});
+		if (!xaiRes.ok) return;
+
+		const xaiData = (await xaiRes.json()) as { data: { url?: string }[] };
+		const imageUrl = xaiData.data?.[0]?.url;
+		if (!imageUrl) return;
+
+		const imgRes = await fetch(imageUrl);
+		if (!imgRes.ok) return;
+
+		const buffer = Buffer.from(await imgRes.arrayBuffer());
+		const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+		const filePath = path.join("uploads", filename);
+		fs.writeFileSync(filePath, buffer);
+
+		await prisma.meals.update({
+			where: { id: mealId },
+			data: { representative_image: filePath },
+		});
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error("Auto-generate image failed:", err.message);
+	}
+}
+
 // Create a meal (admin only)
 router.post(
 	"/",
@@ -54,6 +104,11 @@ router.post(
 			}
 
 			res.json(newMeal);
+
+			// Fire-and-forget: generate AI dish photo if none was uploaded
+			if (!newMeal.representative_image) {
+				generateRepresentativeImageIfMissing(newMeal.id).catch(console.error);
+			}
 		} catch (err: any) {
 			console.error(err.message);
 			res.status(500).json({ error: err.message, stack: err.stack });
@@ -118,6 +173,9 @@ router.put(
 			}
 
 			res.json("Meal was updated!");
+
+			// Fire-and-forget: generate AI dish photo if the meal still has none
+			generateRepresentativeImageIfMissing(Number(id)).catch(console.error);
 		} catch (err: any) {
 			console.error(err.message);
 			res.status(500).send("Server Error");
@@ -160,18 +218,86 @@ router.delete(
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;
-			const images = await prisma.meal_images.findMany({
-				where: { meal_id: Number(id) },
+			const meal = await prisma.meals.findUnique({
+				where: { id: Number(id) },
+				include: { meal_images: true },
 			});
 			await prisma.meals.delete({
 				where: { id: Number(id) },
 			});
-			for (const img of images) {
+			if (meal?.representative_image) {
+				fs.unlink(meal.representative_image, (err) => {
+					if (err) console.error("Failed to delete representative image:", err.message);
+				});
+			}
+			for (const img of meal?.meal_images ?? []) {
 				fs.unlink(img.path, (err) => {
 					if (err) console.error("Failed to delete image file:", err.message);
 				});
 			}
 			res.json("Meal was deleted!");
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
+// Upload a representative (dish) image for a meal (admin only)
+router.put(
+	"/:id/representative-image",
+	requireAdmin,
+	upload.single("image"),
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { id } = req.params;
+			const file = req.file;
+			if (!file) {
+				res.status(400).json("Image file is required");
+				return;
+			}
+
+			// Delete old representative image file if it exists
+			const existing = await prisma.meals.findUnique({ where: { id: Number(id) } });
+			if (existing?.representative_image) {
+				fs.unlink(existing.representative_image, (err) => {
+					if (err) console.error("Failed to delete old representative image:", err.message);
+				});
+			}
+
+			await prisma.meals.update({
+				where: { id: Number(id) },
+				data: { representative_image: file.path },
+			});
+
+			res.json({ path: file.path });
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
+// Delete the representative image for a meal (admin only)
+router.delete(
+	"/:id/representative-image",
+	requireAdmin,
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { id } = req.params;
+			const meal = await prisma.meals.findUnique({ where: { id: Number(id) } });
+			if (!meal?.representative_image) {
+				res.status(404).json("No representative image set");
+				return;
+			}
+			fs.unlink(meal.representative_image, (err) => {
+				if (err) console.error("Failed to delete representative image:", err.message);
+			});
+			await prisma.meals.update({
+				where: { id: Number(id) },
+				data: { representative_image: null },
+			});
+			res.json("Representative image deleted");
 		} catch (err: any) {
 			console.error(err.message);
 			res.status(500).send("Server Error");
@@ -278,6 +404,33 @@ router.delete(
 			res.json("Ingredient removed from meal!");
 		} catch (err: any) {
 			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
+// Generate (or re-generate) an AI dish photo for a meal (admin only)
+router.post(
+	"/:id/generate-image",
+	requireAdmin,
+	async (req: Request, res: Response) => {
+		try {
+			const mealId = Number.parseInt(req.params.id as string, 10);
+
+			// Clear existing representative image so the helper regenerates it
+			await prisma.meals.update({
+				where: { id: mealId },
+				data: { representative_image: null },
+			});
+
+			await generateRepresentativeImageIfMissing(mealId);
+
+			const meal = await prisma.meals.findUnique({ where: { id: mealId } });
+			if (!meal) return res.status(404).json("Meal not found");
+
+			res.json({ path: meal.representative_image });
+		} catch (err: unknown) {
+			if (err instanceof Error) console.error(err.message);
 			res.status(500).send("Server Error");
 		}
 	},

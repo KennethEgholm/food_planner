@@ -48,7 +48,8 @@ The app uses `react-router-dom` (v6) with `BrowserRouter` for client-side routin
 
 | URL | Behaviour |
 |---|---|
-| `/` | Redirects to `/plans` |
+| `/` | Redirects to `/current-plan` |
+| `/current-plan` | Current Meal Plan tab |
 | `/plans` | Meal Plans tab |
 | `/plans/:id` | Meal Plans tab with the specified plan's modal auto-opened |
 | `/meals` | Meals tab |
