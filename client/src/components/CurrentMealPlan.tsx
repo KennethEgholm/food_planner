@@ -13,6 +13,7 @@ interface MealPlanSnack {
 	link_id: number;
 	id: number;
 	name: string;
+	snack_image: string | null;
 }
 
 interface CurrentPlan {
@@ -139,10 +140,42 @@ const CurrentMealPlan: React.FC = () => {
 			</div>
 
 			{plan.snacks.length > 0 && (
-				<div className="text-center text-muted mb-4">
-					<strong>Snacks:</strong>{" "}
-					{plan.snacks.map((s) => s.name).join(", ")}
-				</div>
+				<>
+					<h5 className="text-center text-muted mb-3">Snacks</h5>
+					<div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 mb-4 justify-content-center">
+						{plan.snacks.map((snack) => (
+							<div className="col" key={snack.link_id}>
+								<div className="card h-100 shadow-sm">
+									{snack.snack_image ? (
+										<button
+											type="button"
+											className="p-0 border-0 w-100"
+											style={{ background: "none" }}
+											onClick={() => setFullScreenImage(`/${snack.snack_image}`)}
+										>
+											<img
+												src={`/${snack.snack_image}`}
+												alt={snack.name}
+												className="card-img-top"
+												style={{ height: "120px", objectFit: "cover" }}
+											/>
+										</button>
+									) : (
+										<div
+											className="card-img-top d-flex align-items-center justify-content-center bg-light text-muted"
+											style={{ height: "120px" }}
+										>
+											<span style={{ fontSize: "1.5rem" }}>🍎</span>
+										</div>
+									)}
+									<div className="card-body p-2 text-center">
+										<div className="fw-bold small">{snack.name}</div>
+									</div>
+								</div>
+							</div>
+						))}
+					</div>
+				</>
 			)}
 
 			{fullScreenImage && (

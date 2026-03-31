@@ -195,6 +195,7 @@ router.get("/current", async (_req: Request, res: Response) => {
 			link_id: s.id,
 			id: s.snack_id,
 			name: s.snacks?.name,
+			snack_image: s.snacks?.representative_image ?? null,
 		}));
 
 		res.json({ ...plan, days: sortedDays, snacks: formattedSnacks });

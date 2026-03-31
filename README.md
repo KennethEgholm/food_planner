@@ -65,6 +65,9 @@ gunzip -c backups/food_planner_<timestamp>.sql.gz | \
   docker exec -i food_planner_db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
 ```
 
+### AI usage: Grok
+Console: https://console.x.ai/team/111e5b4c-e96e-41f6-9df2-a969182e6033
+
 ### Run the app locally:
 - cd client && npm run dev
 - cd server && npm run dev

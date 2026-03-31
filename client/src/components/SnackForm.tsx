@@ -11,6 +11,7 @@ interface SnackImage {
 interface Snack {
 	id: number;
 	name: string;
+	representative_image?: string | null;
 	snack_images?: SnackImage[];
 }
 
@@ -42,6 +43,11 @@ const SnackForm: React.FC<SnackFormProps> = ({
 	const [existingImages, setExistingImages] = useState<SnackImage[]>(
 		initialSnack?.snack_images ?? [],
 	);
+	const [representativeImage, setRepresentativeImage] = useState<string | null>(
+		initialSnack?.representative_image ?? null,
+	);
+	const [newRepresentativeImage, setNewRepresentativeImage] = useState<File | null>(null);
+	const [newRepresentativePreview, setNewRepresentativePreview] = useState<string | null>(null);
 	const [fullScreen, setFullScreen] = useState<{
 		images: string[];
 		index: number;
@@ -87,6 +93,29 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			...prev,
 			...files.map((f) => URL.createObjectURL(f)),
 		]);
+	};
+
+	const handleRepresentativeImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		setNewRepresentativeImage(file);
+		setNewRepresentativePreview(URL.createObjectURL(file));
+	};
+
+	const removeRepresentativeImage = async () => {
+		if (newRepresentativeImage) {
+			setNewRepresentativeImage(null);
+			setNewRepresentativePreview(null);
+			return;
+		}
+		if (representativeImage && initialSnack?.id) {
+			try {
+				await axios.delete(`/api/snacks/${initialSnack.id}/representative-image`);
+				setRepresentativeImage(null);
+			} catch (err: any) {
+				console.error(err.message);
+			}
+		}
 	};
 
 	const removeNewImage = (index: number) => {
@@ -150,6 +179,13 @@ const SnackForm: React.FC<SnackFormProps> = ({
 			}
 
 			if (!currentSnackId) return;
+
+			// Upload representative image if a new one was selected
+			if (newRepresentativeImage) {
+				const repFormData = new FormData();
+				repFormData.append("image", newRepresentativeImage);
+				await axios.put(`/api/snacks/${currentSnackId}/representative-image`, repFormData);
+			}
 
 			// If creating, save ingredients locally queued
 			if (!isEditMode && snackIngredients.length > 0) {
@@ -224,13 +260,17 @@ const SnackForm: React.FC<SnackFormProps> = ({
 	const resetForm = () => {
 		setNewImages([]);
 		setNewImagePreviews([]);
+		setNewRepresentativeImage(null);
+		setNewRepresentativePreview(null);
 		if (!initialSnack) {
 			setName("");
 			setSnackIngredients([]);
 			setExistingImages([]);
+			setRepresentativeImage(null);
 		} else {
 			setName(initialSnack.name);
 			setExistingImages(initialSnack.snack_images ?? []);
+			setRepresentativeImage(initialSnack.representative_image ?? null);
 			getSnackIngredients();
 		}
 	};
@@ -352,11 +392,57 @@ const SnackForm: React.FC<SnackFormProps> = ({
 							</div>
 
 							<div className="mb-3">
+								<p className="form-label fw-semibold mb-2">Dish Photo</p>
+								<div className="d-flex align-items-start gap-3 flex-wrap">
+									{(newRepresentativePreview ?? (representativeImage ? `/${representativeImage}` : null)) && (
+										<div style={{ position: "relative", display: "inline-block" }}>
+											<img
+												src={newRepresentativePreview ?? `/${representativeImage}`}
+												alt="Dish"
+												style={{ width: "120px", height: "120px", objectFit: "cover", borderRadius: "6px" }}
+											/>
+											{!readOnly && (
+												<button
+													type="button"
+													className="btn btn-danger btn-sm"
+													style={{ position: "absolute", top: 0, right: 0, padding: "0 4px", fontSize: "10px", lineHeight: "16px" }}
+													onClick={removeRepresentativeImage}
+												>
+													✕
+												</button>
+											)}
+										</div>
+									)}
+									{!readOnly && !(newRepresentativePreview ?? representativeImage) && (
+										<input
+											type="file"
+											className="form-control"
+											id={`rep-image-${modalId}`}
+											accept="image/*"
+											onChange={handleRepresentativeImageChange}
+										/>
+									)}
+									{!readOnly && (newRepresentativePreview ?? representativeImage) && (
+										<label htmlFor={`rep-image-replace-${modalId}`} className="btn btn-outline-secondary btn-sm align-self-end">
+											Replace
+											<input
+												type="file"
+												id={`rep-image-replace-${modalId}`}
+												accept="image/*"
+												className="d-none"
+												onChange={handleRepresentativeImageChange}
+											/>
+										</label>
+									)}
+								</div>
+							</div>
+
+							<div className="mb-3">
 								<label
 									htmlFor={`snack-image-${modalId}`}
-									className="form-label"
+									className="form-label fw-semibold"
 								>
-									Snack Images
+									Cookbook Snapshots
 								</label>
 								{!readOnly && (
 									<input

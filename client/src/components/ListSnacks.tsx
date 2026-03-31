@@ -12,6 +12,8 @@ interface SnackImage {
 interface Snack {
 	id: number;
 	name: string;
+	representative_image?: string | null;
+	representative_image?: string | null;
 	snack_images?: SnackImage[];
 }
 
@@ -55,12 +57,12 @@ const ListSnacks: React.FC = () => {
 					{snacks.map((snack) => (
 						<tr key={snack.id}>
 							<td>
-								{snack.snack_images && snack.snack_images.length > 0 && (
+								{(snack.representative_image ?? snack.snack_images?.[0]?.path) && (
 									<div
 										style={{ position: "relative", display: "inline-block" }}
 									>
 										<img
-											src={`/${snack.snack_images[0].path}`}
+											src={`/${snack.representative_image ?? snack.snack_images?.[0]?.path}`}
 											alt={snack.name}
 											style={{
 												width: "50px",
@@ -69,10 +71,10 @@ const ListSnacks: React.FC = () => {
 												cursor: "pointer",
 											}}
 											onClick={() =>
-												setFullScreenImage(`/${snack.snack_images?.[0].path}`)
+												setFullScreenImage(`/${snack.representative_image ?? snack.snack_images?.[0]?.path}`)
 											}
 										/>
-										{snack.snack_images.length > 1 && (
+										{!snack.representative_image && snack.snack_images && snack.snack_images.length > 1 && (
 											<span
 												className="badge bg-secondary"
 												style={{

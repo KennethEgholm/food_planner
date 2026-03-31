@@ -103,11 +103,12 @@ model snack_ingredients {
 }
 
 model snacks {
-  id                Int                 @id @default(autoincrement())
-  name              String              @unique @db.VarChar(255)
-  meal_plan_snacks  meal_plan_snacks[]
-  snack_ingredients snack_ingredients[]
-  snack_images      snack_images[]
+  id                   Int                 @id @default(autoincrement())
+  name                 String              @unique @db.VarChar(255)
+  representative_image String?             @db.VarChar(512)
+  meal_plan_snacks     meal_plan_snacks[]
+  snack_ingredients    snack_ingredients[]
+  snack_images         snack_images[]
 }
 
 model snack_images {

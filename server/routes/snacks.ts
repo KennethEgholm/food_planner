@@ -20,6 +20,56 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Fire-and-forget: generate a representative image via xAI if none exists
+async function generateRepresentativeImageIfMissing(snackId: number): Promise<void> {
+	const snack = await prisma.snacks.findUnique({
+		where: { id: snackId },
+		include: { snack_ingredients: { include: { ingredients: true } } },
+	});
+	if (!snack || snack.representative_image) return;
+
+	const xaiApiKey = process.env.XAI_API_KEY;
+	if (!xaiApiKey) return;
+
+	const ingredientList = snack.snack_ingredients
+		.map((si: any) => si.ingredients.name)
+		.join(", ");
+	const prompt = ingredientList
+		? `A delicious serving of ${snack.name}, made with ${ingredientList}. Food photography, appetizing, well-lit.`
+		: `A delicious serving of ${snack.name}. Food photography, appetizing, well-lit.`;
+
+	try {
+		const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${xaiApiKey}`,
+			},
+			body: JSON.stringify({ model: "grok-imagine-image", prompt, n: 1 }),
+		});
+		if (!xaiRes.ok) return;
+
+		const xaiData = (await xaiRes.json()) as { data: { url?: string }[] };
+		const imageUrl = xaiData.data?.[0]?.url;
+		if (!imageUrl) return;
+
+		const imgRes = await fetch(imageUrl);
+		if (!imgRes.ok) return;
+
+		const buffer = Buffer.from(await imgRes.arrayBuffer());
+		const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
+		const filePath = path.join("uploads", filename);
+		fs.writeFileSync(filePath, buffer);
+
+		await prisma.snacks.update({
+			where: { id: snackId },
+			data: { representative_image: filePath },
+		});
+	} catch (err: unknown) {
+		if (err instanceof Error) console.error("Auto-generate snack image failed:", err.message);
+	}
+}
+
 // Create a snack (admin only)
 router.post(
 	"/",
@@ -48,6 +98,11 @@ router.post(
 			}
 
 			res.json(newSnack);
+
+			// Fire-and-forget: generate AI dish photo if none was uploaded
+			if (!newSnack.representative_image) {
+				generateRepresentativeImageIfMissing(newSnack.id).catch(console.error);
+			}
 		} catch (err: any) {
 			console.error(err.message);
 			res.status(500).json({ error: err.message, stack: err.stack });
@@ -104,6 +159,9 @@ router.put(
 			}
 
 			res.json("Snack was updated!");
+
+			// Fire-and-forget: generate AI dish photo if the snack still has none
+			generateRepresentativeImageIfMissing(Number(id)).catch(console.error);
 		} catch (err: any) {
 			console.error(err.message);
 			res.status(500).send("Server Error");
@@ -139,6 +197,94 @@ router.delete(
 	},
 );
 
+// Upload or replace the representative (dish) image for a snack (admin only)
+router.put(
+	"/:id/representative-image",
+	requireAdmin,
+	upload.single("image"),
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { id } = req.params;
+			const file = req.file;
+			if (!file) {
+				res.status(400).json("No image file provided");
+				return;
+			}
+			const snack = await prisma.snacks.findUnique({ where: { id: Number(id) } });
+			if (!snack) {
+				res.status(404).json("Snack not found");
+				return;
+			}
+			// Delete the old file if one exists
+			if (snack.representative_image) {
+				fs.unlink(snack.representative_image, (err) => {
+					if (err) console.error("Failed to delete old representative image:", err.message);
+				});
+			}
+			await prisma.snacks.update({
+				where: { id: Number(id) },
+				data: { representative_image: file.path },
+			});
+			res.json({ path: file.path });
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
+// Remove the representative (dish) image for a snack (admin only)
+router.delete(
+	"/:id/representative-image",
+	requireAdmin,
+	async (req: Request, res: Response): Promise<void> => {
+		try {
+			const { id } = req.params;
+			const snack = await prisma.snacks.findUnique({ where: { id: Number(id) } });
+			if (!snack) {
+				res.status(404).json("Snack not found");
+				return;
+			}
+			if (snack.representative_image) {
+				fs.unlink(snack.representative_image, (err) => {
+					if (err) console.error("Failed to delete representative image file:", err.message);
+				});
+				await prisma.snacks.update({
+					where: { id: Number(id) },
+					data: { representative_image: null },
+				});
+			}
+			res.json("Representative image removed");
+		} catch (err: any) {
+			console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
+// Generate (or re-generate) an AI dish photo for a snack (admin only)
+router.post(
+	"/:id/generate-image",
+	requireAdmin,
+	async (req: Request, res: Response) => {
+		try {
+			const snackId = Number.parseInt(req.params.id as string, 10);
+			// Clear existing so the helper regenerates it
+			await prisma.snacks.update({
+				where: { id: snackId },
+				data: { representative_image: null },
+			});
+			await generateRepresentativeImageIfMissing(snackId);
+			const snack = await prisma.snacks.findUnique({ where: { id: snackId } });
+			if (!snack) return res.status(404).json("Snack not found");
+			res.json({ path: snack.representative_image });
+		} catch (err: unknown) {
+			if (err instanceof Error) console.error(err.message);
+			res.status(500).send("Server Error");
+		}
+	},
+);
+
 // Delete a snack (admin only)
 router.delete(
 	"/:id",
@@ -146,13 +292,23 @@ router.delete(
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;
-			const images = await prisma.snack_images.findMany({
-				where: { snack_id: Number(id) },
-			});
-			await prisma.snacks.delete({
+			const snack = await prisma.snacks.findUnique({
 				where: { id: Number(id) },
+				include: { snack_images: true },
 			});
-			for (const img of images) {
+			if (!snack) {
+				res.status(404).json("Snack not found");
+				return;
+			}
+			await prisma.snacks.delete({ where: { id: Number(id) } });
+			// Clean up representative image file
+			if (snack.representative_image) {
+				fs.unlink(snack.representative_image, (err) => {
+					if (err) console.error("Failed to delete representative image:", err.message);
+				});
+			}
+			// Clean up cookbook snapshot files
+			for (const img of snack.snack_images) {
 				fs.unlink(img.path, (err) => {
 					if (err) console.error("Failed to delete image file:", err.message);
 				});
