@@ -45,6 +45,8 @@ const ListMealPlans: React.FC = () => {
 		getPlans();
 	}, [getPlans]);
 
+	const sorted = [...plans].sort((a, b) => Number(b.is_current) - Number(a.is_current));
+
 	return (
 		<table className="table mt-5 text-center">
 			<thead>
@@ -54,22 +56,29 @@ const ListMealPlans: React.FC = () => {
 				</tr>
 			</thead>
 			<tbody>
-				{plans.map((plan) => (
+				{sorted.map((plan) => (
 					<tr key={plan.id}>
 						<td>
 							<ShowMealPlan mealPlan={plan} />
-							{plan.is_current && (
-								<span className="badge bg-success ms-2">Current</span>
-							)}
 						</td>
 						<td>
 							<div className="d-flex justify-content-center gap-2">
 								<EditMealPlan mealPlan={plan} />
 								<ShowShoppingList mealPlan={plan} />
-								{!plan.is_current && (
+								{plan.is_current ? (
+									<button
+										type="button"
+										className="btn btn-success btn-sm"
+										style={{ minWidth: "120px" }}
+										disabled
+									>
+										✓ Current
+									</button>
+								) : (
 									<button
 										type="button"
 										className="btn btn-outline-success btn-sm"
+										style={{ minWidth: "120px" }}
 										onClick={() => setCurrentPlan(plan.id)}
 									>
 										Set as Current
