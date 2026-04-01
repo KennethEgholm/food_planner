@@ -438,7 +438,17 @@ router.post(
 		} catch (err: unknown) {
 			if (err instanceof Error) {
 				console.error("Export error:", err);
-				res.status(500).send(`Export failed: ${err.message}`);
+				// Surface auth errors as 401 so the client knows to re-connect
+				const isAuthError = err.message.includes("invalid_grant") ||
+					err.message.includes("Invalid Credentials") ||
+					err.message.includes("Token has been expired") ||
+					err.message.includes("deleted_client") ||
+					err.message.includes("No Google tokens");
+				if (isAuthError) {
+					res.status(401).json("Google authentication expired. Please reconnect.");
+				} else {
+					res.status(500).send(`Export failed: ${err.message}`);
+				}
 			} else {
 				res.status(500).send("Export failed: Unknown error");
 			}

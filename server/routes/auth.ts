@@ -129,6 +129,20 @@ export const getAuthenticatedClient = async (userEmail: string) => {
 	const tokens = JSON.parse(result.tokens);
 	const oauth2Client = getOAuthClient();
 	oauth2Client.setCredentials(tokens);
+
+	// When the library auto-refreshes the access token, save the new tokens to DB
+	oauth2Client.on("tokens", async (newTokens) => {
+		try {
+			const merged = { ...tokens, ...newTokens };
+			await prisma.user_google_tokens.update({
+				where: { user_email: userEmail },
+				data: { tokens: JSON.stringify(merged) },
+			});
+		} catch (err) {
+			console.error("Failed to save refreshed tokens:", err);
+		}
+	});
+
 	return oauth2Client;
 };
 

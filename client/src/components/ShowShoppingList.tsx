@@ -55,7 +55,17 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 			toast.success("Successfully exported to Google Tasks!");
 		} catch (err: any) {
 			console.error(err.message);
-			toast.error("Failed to export.");
+			if (err.response?.status === 401) {
+				// Tokens expired — force re-connect
+				setIsConnected(false);
+				const urlRes = await axios.get("/api/auth/google/url", {
+					params: { returnPath: `/plans/${mealPlan.id}` },
+				}).catch(() => null);
+				if (urlRes) setAuthUrl(urlRes.data.url);
+				toast.error("Google connection expired. Please reconnect.");
+			} else {
+				toast.error("Failed to export.");
+			}
 		}
 	};
 
