@@ -33,6 +33,8 @@ const Settings: React.FC = () => {
 	const [error, setError] = useState<string | null>(null);
 	const [backfilling, setBackfilling] = useState(false);
 	const [backfillResult, setBackfillResult] = useState<string | null>(null);
+	const [backfillingImages, setBackfillingImages] = useState(false);
+	const [backfillImagesResult, setBackfillImagesResult] = useState<string | null>(null);
 
 	useEffect(() => {
 		axios
@@ -75,6 +77,31 @@ const Settings: React.FC = () => {
 			setError("Failed to start calorie backfill.");
 		} finally {
 			setBackfilling(false);
+		}
+	};
+
+	const handleBackfillImages = async () => {
+		setBackfillingImages(true);
+		setBackfillImagesResult(null);
+		try {
+			const [mealsRes, snacksRes] = await Promise.all([
+				axios.post("/api/meals/backfill-images"),
+				axios.post("/api/snacks/backfill-images"),
+			]);
+			const meals = (mealsRes.data as { queued: number }).queued;
+			const snacks = (snacksRes.data as { queued: number }).queued;
+			const total = meals + snacks;
+			if (total === 0) {
+				setBackfillImagesResult("All meals and snacks already have images.");
+			} else {
+				setBackfillImagesResult(
+					`Queued ${meals} meal${meals === 1 ? "" : "s"} and ${snacks} snack${snacks === 1 ? "" : "s"} for image generation. This may take a while.`,
+				);
+			}
+		} catch {
+			setError("Failed to start image backfill.");
+		} finally {
+			setBackfillingImages(false);
 		}
 	};
 
@@ -136,20 +163,35 @@ const Settings: React.FC = () => {
 
 			<hr className="my-4" />
 
-			<h5 className="mb-1">Calorie Data</h5>
+			<h5 className="mb-1">AI Backfill</h5>
 			<p className="text-muted small mb-3">
-				Automatically fill in missing calorie data for all ingredients using AI.
+				Automatically fill in missing data for existing records using AI.
 			</p>
+
+			<p className="mb-1 fw-semibold small">Ingredient calories</p>
 			{backfillResult && (
-				<div className="alert alert-info py-2">{backfillResult}</div>
+				<div className="alert alert-info py-2 mb-2">{backfillResult}</div>
 			)}
 			<button
 				type="button"
-				className="btn btn-outline-primary"
+				className="btn btn-outline-primary mb-4"
 				onClick={handleBackfill}
 				disabled={backfilling}
 			>
 				{backfilling ? "Starting…" : "Backfill missing calories via AI"}
+			</button>
+
+			<p className="mb-1 fw-semibold small">Meal &amp; snack images</p>
+			{backfillImagesResult && (
+				<div className="alert alert-info py-2 mb-2">{backfillImagesResult}</div>
+			)}
+			<button
+				type="button"
+				className="btn btn-outline-primary"
+				onClick={handleBackfillImages}
+				disabled={backfillingImages}
+			>
+				{backfillingImages ? "Starting…" : "Backfill missing images via AI"}
 			</button>
 		</div>
 	);

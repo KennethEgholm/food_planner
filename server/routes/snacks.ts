@@ -452,4 +452,32 @@ router.delete(
 	},
 );
 
+// Backfill images for all snacks missing a representative image (admin only)
+router.post("/backfill-images", requireAdmin, async (_req: Request, res: Response): Promise<void> => {
+	try {
+		const missing = await prisma.snacks.findMany({
+			where: { representative_image: null },
+			select: { id: true, name: true },
+		});
+
+		res.json({ queued: missing.length });
+
+		(async () => {
+			for (const snack of missing) {
+				try {
+					await generateRepresentativeImageIfMissing(snack.id);
+					console.log(`[image-backfill] snack "${snack.name}" done`);
+				} catch (err: unknown) {
+					if (err instanceof Error) console.error(`[image-backfill] snack "${snack.name}" failed:`, err.message);
+				}
+				await new Promise((r) => setTimeout(r, 1000));
+			}
+			console.log(`[image-backfill] Done — processed ${missing.length} snacks`);
+		})();
+	} catch (err: any) {
+		console.error(err.message);
+		res.status(500).send("Server Error");
+	}
+});
+
 export default router;
