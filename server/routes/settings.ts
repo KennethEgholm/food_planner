@@ -18,8 +18,8 @@ router.get("/", requireAdmin, async (_req: Request, res: Response) => {
 // Upsert a single setting by key (admin only)
 router.put("/:key", requireAdmin, async (req: Request, res: Response) => {
 	try {
-		const { key } = req.params;
-		const { value } = req.body;
+		const key = req.params.key as string;
+		const value = req.body.value as string;
 		const setting = await prisma.app_settings.upsert({
 			where: { key },
 			update: { value },
