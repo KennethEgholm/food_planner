@@ -7,6 +7,7 @@ import { Fragment, useEffect, useState } from "react";
 const InputIngredient: React.FC = () => {
 	const [name, setName] = useState<string>("");
 	const [unit, setUnit] = useState<string>("");
+	const [caloriesPer100g, _setCaloriesPer100g] = useState<string>("");
 	const [count, setCount] = useState<number | null>(null);
 
 	useEffect(() => {
@@ -19,7 +20,8 @@ const InputIngredient: React.FC = () => {
 	const onSubmit = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
-			const body = { name, unit };
+			const body: Record<string, unknown> = { name, unit };
+			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
 			await axios.post("/api/ingredients", body);
 			window.location.reload();
 		} catch (err: any) {

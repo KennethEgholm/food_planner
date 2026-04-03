@@ -6,6 +6,7 @@ interface Ingredient {
 	id: number;
 	name: string;
 	unit?: string;
+	calories_per_100g?: number | null;
 }
 
 interface EditIngredientProps {
@@ -15,11 +16,15 @@ interface EditIngredientProps {
 const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 	const [name, setName] = useState(ingredient.name);
 	const [unit, setUnit] = useState(ingredient.unit || "");
+	const [caloriesPer100g, setCaloriesPer100g] = useState(
+		ingredient.calories_per_100g != null ? String(ingredient.calories_per_100g) : "",
+	);
 
 	const updateIngredient = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
-			const body = { name, unit };
+			const body: Record<string, unknown> = { name, unit };
+			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
 			await axios.put(`/api/ingredients/${ingredient.id}`, body);
 			window.location.reload();
 		} catch (err: any) {
@@ -46,6 +51,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 				onClick={() => {
 					setName(ingredient.name);
 					setUnit(ingredient.unit || "");
+					setCaloriesPer100g(ingredient.calories_per_100g != null ? String(ingredient.calories_per_100g) : "");
 				}}
 			>
 				<div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -59,6 +65,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 								onClick={() => {
 									setName(ingredient.name);
 									setUnit(ingredient.unit || "");
+									setCaloriesPer100g(ingredient.calories_per_100g != null ? String(ingredient.calories_per_100g) : "");
 								}}
 							></button>
 						</div>
@@ -101,6 +108,19 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 								<option value="deciliter">deciliter</option>
 								<option value="stk">stk</option>
 							</select>
+							<label htmlFor={`calories-input-${ingredient.id}`} className="form-label mt-3">
+								Calories per 100g
+							</label>
+							<input
+								id={`calories-input-${ingredient.id}`}
+								type="number"
+								min="0"
+								className="form-control"
+								placeholder="Leave blank to autofill via AI"
+								value={caloriesPer100g}
+								onChange={(e) => setCaloriesPer100g(e.target.value)}
+								onKeyDown={(e) => { if (e.key === "Enter") updateIngredient(e); }}
+							/>
 						</div>
 
 						<div className="modal-footer">
@@ -119,6 +139,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 								onClick={() => {
 									setName(ingredient.name);
 									setUnit(ingredient.unit || "");
+									setCaloriesPer100g(ingredient.calories_per_100g != null ? String(ingredient.calories_per_100g) : "");
 								}}
 							>
 								Close

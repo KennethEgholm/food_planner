@@ -15,6 +15,9 @@ interface Meal {
 	suitable_for_weekend: number | boolean;
 	representative_image?: string | null;
 	meal_images?: MealImage[];
+	total_calories?: number | null;
+	calories_per_100g?: number | null;
+	calorie_tier?: "low" | "medium" | "high" | null;
 }
 
 const ListMeals: React.FC = () => {
@@ -94,6 +97,15 @@ const ListMeals: React.FC = () => {
 								<MealForm initialMeal={meal} readOnly />{" "}
 								{Boolean(meal.suitable_for_weekend) && (
 									<span className="badge bg-success ms-2">Weekend</span>
+								)}
+								{meal.calorie_tier === "low" && (
+									<span className="badge bg-success ms-2">{meal.calories_per_100g} kcal/100g</span>
+								)}
+								{meal.calorie_tier === "medium" && (
+									<span className="badge bg-warning text-dark ms-2">{meal.calories_per_100g} kcal/100g</span>
+								)}
+								{meal.calorie_tier === "high" && (
+									<span className="badge bg-danger ms-2">{meal.calories_per_100g} kcal/100g</span>
 								)}
 							</td>
 							<td>

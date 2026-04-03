@@ -34,6 +34,7 @@ model ingredients {
   id                Int                 @id @default(autoincrement())
   name              String              @unique @db.VarChar(255)
   unit              String?             @db.VarChar(50)
+  calories_per_100g Float?
   meal_ingredients  meal_ingredients[]
   snack_ingredients snack_ingredients[]
 }

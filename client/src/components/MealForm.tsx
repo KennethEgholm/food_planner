@@ -14,6 +14,9 @@ interface Meal {
 	suitable_for_weekend: number | boolean;
 	representative_image?: string | null;
 	meal_images?: MealImage[];
+	total_calories?: number | null;
+	calories_per_100g?: number | null;
+	calorie_tier?: "low" | "medium" | "high" | null;
 }
 
 interface Ingredient {
@@ -633,6 +636,25 @@ const MealForm: React.FC<MealFormProps> = ({
 								))}
 							</ul>
 						</div>
+
+						{(initialMeal?.calories_per_100g != null || initialMeal?.total_calories != null) && (
+							<div className="px-3 pb-2 d-flex justify-content-end gap-2">
+								{initialMeal.calories_per_100g != null && (
+									<span className={`badge fs-6 ${
+										initialMeal.calorie_tier === "low" ? "bg-success" :
+										initialMeal.calorie_tier === "high" ? "bg-danger" :
+										"bg-warning text-dark"
+									}`}>
+										{initialMeal.calories_per_100g} kcal/100g
+									</span>
+								)}
+								{initialMeal.total_calories != null && (
+									<span className="badge fs-6 bg-secondary">
+										{initialMeal.total_calories} kcal total
+									</span>
+								)}
+							</div>
+						)}
 
 						<div className="modal-footer">
 							{!readOnly && (

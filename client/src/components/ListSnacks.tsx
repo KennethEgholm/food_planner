@@ -13,8 +13,10 @@ interface Snack {
 	id: number;
 	name: string;
 	representative_image?: string | null;
-	representative_image?: string | null;
 	snack_images?: SnackImage[];
+	total_calories?: number | null;
+	calories_per_100g?: number | null;
+	calorie_tier?: "low" | "medium" | "high" | null;
 }
 
 const ListSnacks: React.FC = () => {
@@ -92,6 +94,15 @@ const ListSnacks: React.FC = () => {
 							</td>
 							<td>
 								<SnackForm initialSnack={snack} readOnly />
+								{snack.calorie_tier === "low" && (
+									<span className="badge bg-success ms-2">{snack.calories_per_100g} kcal/100g</span>
+								)}
+								{snack.calorie_tier === "medium" && (
+									<span className="badge bg-warning text-dark ms-2">{snack.calories_per_100g} kcal/100g</span>
+								)}
+								{snack.calorie_tier === "high" && (
+									<span className="badge bg-danger ms-2">{snack.calories_per_100g} kcal/100g</span>
+								)}
 							</td>
 							<td>
 								<div className="d-flex justify-content-center gap-2">

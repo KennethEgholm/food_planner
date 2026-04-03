@@ -13,6 +13,9 @@ interface Snack {
 	name: string;
 	representative_image?: string | null;
 	snack_images?: SnackImage[];
+	total_calories?: number | null;
+	calories_per_100g?: number | null;
+	calorie_tier?: "low" | "medium" | "high" | null;
 }
 
 interface Ingredient {
@@ -606,6 +609,25 @@ const SnackForm: React.FC<SnackFormProps> = ({
 								))}
 							</ul>
 						</div>
+
+						{(initialSnack?.calories_per_100g != null || initialSnack?.total_calories != null) && (
+							<div className="px-3 pb-2 d-flex justify-content-end gap-2">
+								{initialSnack.calories_per_100g != null && (
+									<span className={`badge fs-6 ${
+										initialSnack.calorie_tier === "low" ? "bg-success" :
+										initialSnack.calorie_tier === "high" ? "bg-danger" :
+										"bg-warning text-dark"
+									}`}>
+										{initialSnack.calories_per_100g} kcal/100g
+									</span>
+								)}
+								{initialSnack.total_calories != null && (
+									<span className="badge fs-6 bg-secondary">
+										{initialSnack.total_calories} kcal total
+									</span>
+								)}
+							</div>
+						)}
 
 						<div className="modal-footer">
 							{!readOnly && (

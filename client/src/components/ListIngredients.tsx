@@ -9,6 +9,7 @@ interface Ingredient {
 	id: number;
 	name: string;
 	unit?: string;
+	calories_per_100g?: number | null;
 }
 
 const ListIngredients: React.FC = () => {
@@ -42,6 +43,7 @@ const ListIngredients: React.FC = () => {
 				<tr>
 					<th>Name</th>
 					<th>Unit</th>
+					<th>Cal/100g</th>
 					<th>Actions</th>
 				</tr>
 			</thead>
@@ -50,6 +52,7 @@ const ListIngredients: React.FC = () => {
 					<tr key={ingredient.id}>
 						<td>{ingredient.name}</td>
 						<td>{ingredient.unit || "-"}</td>
+						<td>{ingredient.calories_per_100g != null ? ingredient.calories_per_100g : <span className="text-muted">–</span>}</td>
 						<td>
 							<div className="d-flex justify-content-center gap-2">
 								<EditIngredient ingredient={ingredient} />

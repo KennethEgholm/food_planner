@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth";
 import ingredientRoutes from "./routes/ingredients";
 import mealPlanRoutes from "./routes/mealPlans";
 import mealRoutes from "./routes/meals";
+import settingsRoutes from "./routes/settings";
 import snackRoutes from "./routes/snacks";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -35,6 +36,7 @@ app.use("/ingredients", ingredientRoutes);
 app.use("/meals", mealRoutes);
 app.use("/meal-plans", mealPlanRoutes);
 app.use("/snacks", snackRoutes);
+app.use("/settings", settingsRoutes);
 app.use("/auth/google", authRoutes);
 
 // Global error handler

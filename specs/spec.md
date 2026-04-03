@@ -19,10 +19,15 @@ Food Planner is a web application designed to help users plan their meals for th
             - centiliter
             - deciliter
             - stk
+    - An ingredient has a measure: calories per 100g. This is used to calculate the total calories of a meal based on its ingredients and their quantities.
+    - The calories per 100g will be autofilled by asking the configured AI model (e.g. OpenAI) when an ingredient is created or updated, but the user can override it if they want to.
+
 - **Meals**: 
     - Users can create meals and associate them with ingredients. A meal has a name and a list of ingredients with their respective quantities.
     - A meal can have zero to many images attached to it. The images are shown as thumbnails and when pressed the image is shown in full size.
     - Uploaded images must be stored as files in a folder on the server.
+    - A meal has a badge: "Low Calorie", "Medium Calorie", "High Calorie". The badge is determined by the total calories of the meal, which is calculated based on the calories of its ingredients and their quantities.
+    - A meal also shows the number of calories/100g.
 
 - **Snacks**: 
     - Snacks are a category similar to meals. They also consist of ingredients.
@@ -32,6 +37,9 @@ Food Planner is a web application designed to help users plan their meals for th
 - **Shopping List Generation**: 
     - Users can generate a shopping list based on their meal plan, which aggregates the required ingredients and their quantities for the week.
     - The shopping list can be shared with Google Tasks by uploading it via their API.
+
+- **Settings**: 
+    - Users can configure the AI model used for autofilling ingredient calories as well as meal images. Eg API key and model name.
 
 ## Technical Specifications
 - **Frontend**: React.js for building the user interface. Must be fully functional on a mobile device.

@@ -13,6 +13,7 @@ import ListMealPlans from "./components/ListMealPlans";
 import ListMeals from "./components/ListMeals";
 import ListSnacks from "./components/ListSnacks";
 import MealForm from "./components/MealForm";
+import Settings from "./components/Settings";
 import SnackForm from "./components/SnackForm";
 
 function App() {
@@ -58,6 +59,11 @@ function App() {
 				<li className="nav-item">
 					<NavLink className={navLinkClass} to="/ingredients" end>
 						Ingredients
+					</NavLink>
+				</li>
+				<li className="nav-item ms-auto">
+					<NavLink className={navLinkClass} to="/settings" end>
+						⚙ Settings
 					</NavLink>
 				</li>
 			</ul>
@@ -137,6 +143,14 @@ function App() {
 							<div className="tab-pane fade show active">
 								<InputIngredient />
 								<ListIngredients />
+							</div>
+						}
+					/>
+					<Route
+						path="/settings"
+						element={
+							<div className="tab-pane fade show active">
+								<Settings />
 							</div>
 						}
 					/>

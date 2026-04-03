@@ -29,8 +29,14 @@ async function generateRepresentativeImageIfMissing(mealId: number): Promise<voi
 	});
 	if (!meal || meal.representative_image) return;
 
-	const xaiApiKey = process.env.XAI_API_KEY;
+	const aiSettings = await prisma.app_settings.findMany({
+		where: { key: { in: ["image_ai_api_key", "image_ai_base_url", "image_ai_model"] } },
+	});
+	const getSetting = (key: string) => aiSettings.find((s) => s.key === key)?.value || null;
+	const xaiApiKey = getSetting("image_ai_api_key");
 	if (!xaiApiKey) return;
+	const baseUrl = (getSetting("image_ai_base_url") || "https://api.x.ai/v1").replace(/\/$/, "");
+	const imageModel = getSetting("image_ai_model") || "grok-imagine-image";
 
 	const ingredientList = meal.meal_ingredients
 		.map((mi: any) => mi.ingredients.name)
@@ -40,19 +46,26 @@ async function generateRepresentativeImageIfMissing(mealId: number): Promise<voi
 		: `A delicious plate of ${meal.name}. Food photography, appetizing, well-lit.`;
 
 	try {
-		const xaiRes = await fetch("https://api.x.ai/v1/images/generations", {
+		const xaiRes = await fetch(`${baseUrl}/images/generations`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${xaiApiKey}`,
 			},
-			body: JSON.stringify({ model: "grok-imagine-image", prompt, n: 1 }),
+			body: JSON.stringify({ model: imageModel, prompt, n: 1 }),
 		});
-		if (!xaiRes.ok) return;
+		if (!xaiRes.ok) {
+			const errBody = await xaiRes.text();
+			console.error(`[image-gen] xAI API error ${xaiRes.status}: ${errBody}`);
+			return;
+		}
 
 		const xaiData = (await xaiRes.json()) as { data: { url?: string }[] };
 		const imageUrl = xaiData.data?.[0]?.url;
-		if (!imageUrl) return;
+		if (!imageUrl) {
+			console.error("[image-gen] No image URL in response:", JSON.stringify(xaiData));
+			return;
+		}
 
 		const imgRes = await fetch(imageUrl);
 		if (!imgRes.ok) return;
@@ -119,11 +132,56 @@ router.post(
 // Get all meals
 router.get("/", async (_req: Request, res: Response): Promise<void> => {
 	try {
-		const allMeals = await prisma.meals.findMany({
-			orderBy: { name: "asc" },
-			include: { meal_images: { orderBy: { sort_order: "asc" } } },
+		const [allMeals, thresholdSettings] = await Promise.all([
+			prisma.meals.findMany({
+				orderBy: { name: "asc" },
+				include: {
+					meal_images: { orderBy: { sort_order: "asc" } },
+					meal_ingredients: { include: { ingredients: true } },
+				},
+			}),
+			prisma.app_settings.findMany({
+				where: { key: { in: ["calorie_low_threshold", "calorie_high_threshold"] } },
+			}),
+		]);
+
+		const getSetting = (key: string, def: number) => {
+			const val = thresholdSettings.find((s) => s.key === key)?.value;
+			return val != null ? Number(val) : def;
+		};
+		const lowThreshold = getSetting("calorie_low_threshold", 200);
+		const highThreshold = getSetting("calorie_high_threshold", 300);
+
+		const mealsWithCalories = allMeals.map((meal) => {
+			let weightedCalories = 0;
+			let totalWeight = 0;
+			let hasCalories = false;
+			for (const mi of meal.meal_ingredients) {
+				const cal = (mi.ingredients as any).calories_per_100g;
+				const qty = mi.quantity != null ? Number(mi.quantity) : null;
+				if (cal != null && qty != null) {
+					weightedCalories += (qty / 100) * cal;
+					totalWeight += qty;
+					hasCalories = true;
+				}
+			}
+			const total = hasCalories ? Math.round(weightedCalories) : null;
+			const calories_per_100g =
+				hasCalories && totalWeight > 0
+					? Math.round((weightedCalories / totalWeight) * 100)
+					: null;
+			const calorie_tier =
+				calories_per_100g == null
+					? null
+					: calories_per_100g < lowThreshold
+						? "low"
+						: calories_per_100g > highThreshold
+							? "high"
+							: "medium";
+			return { ...meal, total_calories: total, calories_per_100g, calorie_tier };
 		});
-		res.json(allMeals);
+
+		res.json(mealsWithCalories);
 	} catch (err: any) {
 		console.error(err.message);
 		res.status(500).send("Server Error");
@@ -343,11 +401,18 @@ router.post(
 			const { id } = req.params;
 			const { ingredient_id, quantity } = req.body;
 
-			await prisma.meal_ingredients.create({
-				data: {
+			await prisma.meal_ingredients.upsert({
+				where: {
+					meal_id_ingredient_id: {
+						meal_id: Number(id),
+						ingredient_id: Number(ingredient_id),
+					},
+				},
+				update: { quantity },
+				create: {
 					meal_id: Number(id),
 					ingredient_id: Number(ingredient_id),
-					quantity: quantity,
+					quantity,
 				},
 			});
 			res.json("Ingredient added to meal!");
