@@ -2,6 +2,7 @@ import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
 import { prisma } from "../db";
 import { getUser, requireAdmin } from "../middleware/auth";
+import { generateAIMealPlan } from "../utils/aiMealPlan";
 import { getAuthenticatedClient } from "./auth";
 
 const router = Router();
@@ -132,6 +133,48 @@ router.post("/random", requireAdmin, async (req: Request, res: Response) => {
 	} catch (err: unknown) {
 		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
+	}
+});
+
+// Create an AI-generated meal plan (admin only)
+router.post("/ai", requireAdmin, async (req: Request, res: Response) => {
+	const { name } = req.body;
+	if (!name) {
+		return res.status(400).json("Meal Plan name is required");
+	}
+
+	let newPlan: any;
+	try {
+		newPlan = await prisma.meal_plans.create({ data: { name } });
+	} catch (err: unknown) {
+		if ((err as any).code === "P2002") {
+			return res.status(409).json("Meal Plan name must be unique");
+		}
+		return res.status(500).send("Server Error");
+	}
+
+	try {
+		const { days, snack_ids } = await generateAIMealPlan();
+
+		if (days.length > 0) {
+			await prisma.meal_plan_days.createMany({
+				data: days.map((d) => ({ meal_plan_id: newPlan.id, day: d.day, meal_id: d.meal_id })),
+			});
+		}
+
+		if (snack_ids.length > 0) {
+			await prisma.meal_plan_snacks.createMany({
+				data: snack_ids.map((snack_id) => ({ meal_plan_id: newPlan.id, snack_id })),
+			});
+		}
+
+		res.json(newPlan);
+	} catch (err: unknown) {
+		// Clean up the orphan plan before reporting the error
+		await prisma.meal_plans.delete({ where: { id: newPlan.id } }).catch(() => {});
+		const message = err instanceof Error ? err.message : "AI meal plan generation failed";
+		console.error("[ai-meal-plan]", message);
+		res.status(500).json(message);
 	}
 });
 

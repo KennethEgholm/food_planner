@@ -37,6 +37,9 @@ const Settings: React.FC = () => {
 	const [backfillImagesResult, setBackfillImagesResult] = useState<string | null>(null);
 	const [calorieAiOpen, setCalorieAiOpen] = useState(false);
 	const [imageAiOpen, setImageAiOpen] = useState(false);
+	const [mealPlanAiOpen, setMealPlanAiOpen] = useState(false);
+	const [savingPreference, setSavingPreference] = useState(false);
+	const [savedPreference, setSavedPreference] = useState(false);
 
 	useEffect(() => {
 		axios
@@ -107,6 +110,19 @@ const Settings: React.FC = () => {
 		}
 	};
 
+	const handleSavePreference = async () => {
+		setSavingPreference(true);
+		try {
+			await axios.put("/api/settings/meal_plan_preference", { value: values.meal_plan_preference ?? "" });
+			setSavedPreference(true);
+			setTimeout(() => setSavedPreference(false), 2000);
+		} catch {
+			setError("Failed to save meal plan preference.");
+		} finally {
+			setSavingPreference(false);
+		}
+	};
+
 	const renderField = (field: SettingField, suffix?: React.ReactNode) => (
 		<div className="mb-3" key={field.key}>
 			<label htmlFor={`setting-${field.key}`} className="form-label fw-semibold">
@@ -170,6 +186,44 @@ const Settings: React.FC = () => {
 			</button>
 			<p className="text-muted small mb-3">Used for automatically generating meal and snack photos.</p>
 			{imageAiOpen && IMAGE_AI_FIELDS.map((f) => renderField(f))}
+
+			<hr className="my-4" />
+
+			<button
+				type="button"
+				className="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-1 mb-1"
+				onClick={() => setMealPlanAiOpen((o) => !o)}
+				aria-expanded={mealPlanAiOpen}
+			>
+				<h5 className="mb-0">Meal Plan AI</h5>
+				<span>{mealPlanAiOpen ? "▲" : "▼"}</span>
+			</button>
+			<p className="text-muted small mb-3">
+				Preferences sent to the AI when generating a meal plan (e.g. "prefer fish on Fridays, hearty meals in winter").
+			</p>
+			{mealPlanAiOpen && (
+				<div className="mb-3">
+					<label htmlFor="setting-meal_plan_preference" className="form-label fw-semibold">
+						Preference
+					</label>
+					<textarea
+						id="setting-meal_plan_preference"
+						className="form-control mb-2"
+						rows={4}
+						placeholder="e.g. prefer fish on Fridays, light meals in summer, heavy protein on Mondays"
+						value={values.meal_plan_preference ?? ""}
+						onChange={(e) => setValues((v) => ({ ...v, meal_plan_preference: e.target.value }))}
+					/>
+					<button
+						type="button"
+						className={`btn ${savedPreference ? "btn-success" : "btn-outline-secondary"}`}
+						onClick={handleSavePreference}
+						disabled={savingPreference}
+					>
+						{savedPreference ? "Saved" : savingPreference ? "Saving…" : "Save"}
+					</button>
+				</div>
+			)}
 
 			<hr className="my-4" />
 

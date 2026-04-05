@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 const InputMealPlan: React.FC = () => {
 	const [name, setName] = useState<string>("");
 	const [count, setCount] = useState<number | null>(null);
+	const [aiLoading, setAiLoading] = useState(false);
 
 	useEffect(() => {
 		axios
@@ -43,6 +44,21 @@ const InputMealPlan: React.FC = () => {
 			} else {
 				toast.error("Failed to create random meal plan");
 			}
+		}
+	};
+
+	const onAISubmit = async (e: React.SyntheticEvent) => {
+		e.preventDefault();
+		setAiLoading(true);
+		try {
+			await axios.post("/api/meal-plans/ai", { name });
+			window.location.reload();
+		} catch (err: any) {
+			console.error(err.message);
+			const msg = err.response?.data || "Failed to generate AI meal plan";
+			toast.error(msg);
+		} finally {
+			setAiLoading(false);
 		}
 	};
 
@@ -145,6 +161,7 @@ const InputMealPlan: React.FC = () => {
 								type="button"
 								className="btn btn-success"
 								data-bs-dismiss="modal"
+								disabled={aiLoading}
 								onClick={(e) => onSubmit(e)}
 							>
 								Create Empty
@@ -153,14 +170,31 @@ const InputMealPlan: React.FC = () => {
 								type="button"
 								className="btn btn-warning"
 								data-bs-dismiss="modal"
+								disabled={aiLoading}
 								onClick={(e) => onRandomSubmit(e)}
 							>
 								Create Random
 							</button>
 							<button
 								type="button"
+								className="btn btn-primary"
+								disabled={aiLoading || !name.trim()}
+								onClick={(e) => onAISubmit(e)}
+							>
+								{aiLoading ? (
+									<>
+										<span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+										Generating…
+									</>
+								) : (
+									"AI Create"
+								)}
+							</button>
+							<button
+								type="button"
 								className="btn btn-danger"
 								data-bs-dismiss="modal"
+								disabled={aiLoading}
 								onClick={() => setName("")}
 							>
 								Close
