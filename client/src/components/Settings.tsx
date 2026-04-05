@@ -35,6 +35,8 @@ const Settings: React.FC = () => {
 	const [backfillResult, setBackfillResult] = useState<string | null>(null);
 	const [backfillingImages, setBackfillingImages] = useState(false);
 	const [backfillImagesResult, setBackfillImagesResult] = useState<string | null>(null);
+	const [calorieAiOpen, setCalorieAiOpen] = useState(false);
+	const [imageAiOpen, setImageAiOpen] = useState(false);
 
 	useEffect(() => {
 		axios
@@ -143,15 +145,31 @@ const Settings: React.FC = () => {
 				</div>
 			)}
 
-			<h5 className="mb-1">Calorie AI</h5>
+			<button
+				type="button"
+				className="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-1 mb-1"
+				onClick={() => setCalorieAiOpen((o) => !o)}
+				aria-expanded={calorieAiOpen}
+			>
+				<h5 className="mb-0">Calorie AI</h5>
+				<span>{calorieAiOpen ? "▲" : "▼"}</span>
+			</button>
 			<p className="text-muted small mb-3">Used for autofilling calorie data on ingredients.</p>
-			{CALORIE_AI_FIELDS.map((f) => renderField(f))}
+			{calorieAiOpen && CALORIE_AI_FIELDS.map((f) => renderField(f))}
 
 			<hr className="my-4" />
 
-			<h5 className="mb-1">Image Generation AI</h5>
+			<button
+				type="button"
+				className="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-1 mb-1"
+				onClick={() => setImageAiOpen((o) => !o)}
+				aria-expanded={imageAiOpen}
+			>
+				<h5 className="mb-0">Image Generation AI</h5>
+				<span>{imageAiOpen ? "▲" : "▼"}</span>
+			</button>
 			<p className="text-muted small mb-3">Used for automatically generating meal and snack photos.</p>
-			{IMAGE_AI_FIELDS.map((f) => renderField(f))}
+			{imageAiOpen && IMAGE_AI_FIELDS.map((f) => renderField(f))}
 
 			<hr className="my-4" />
 
