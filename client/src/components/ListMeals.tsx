@@ -21,9 +21,37 @@ interface Meal {
 	plan_count?: number;
 }
 
+type SortField = "name" | "calories_per_100g" | "plan_count";
+type SortDir = "asc" | "desc";
+
 const ListMeals: React.FC = () => {
 	const [meals, setMeals] = useState<Meal[]>([]);
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+	const [sortField, setSortField] = useState<SortField>("name");
+	const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+	const handleSort = (field: SortField) => {
+		if (sortField === field) {
+			setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+		} else {
+			setSortField(field);
+			setSortDir("asc");
+		}
+	};
+
+	const sortedMeals = [...meals].sort((a, b) => {
+		let cmp = 0;
+		if (sortField === "name") {
+			cmp = a.name.localeCompare(b.name);
+		} else if (sortField === "calories_per_100g") {
+			const aVal = a.calories_per_100g ?? -1;
+			const bVal = b.calories_per_100g ?? -1;
+			cmp = aVal - bVal;
+		} else {
+			cmp = (a.plan_count ?? 0) - (b.plan_count ?? 0);
+		}
+		return sortDir === "asc" ? cmp : -cmp;
+	});
 
 	const getMeals = useCallback(async () => {
 		try {
@@ -49,18 +77,37 @@ const ListMeals: React.FC = () => {
 
 	return (
 		<Fragment>
-			<table className="table mt-5 text-center">
+			<table className="table mt-5">
 				<thead>
 					<tr>
-						<th>Image</th>
-						<th>Meal Name</th>
-						<th>Actions</th>
+						<th className="text-center" style={{ width: "70px" }}>Image</th>
+						<th
+							style={{ cursor: "pointer", userSelect: "none" }}
+							onClick={() => handleSort("name")}
+						>
+							Meal Name {sortField === "name" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+						</th>
+						<th
+							className="text-center"
+							style={{ cursor: "pointer", userSelect: "none", width: "140px" }}
+							onClick={() => handleSort("calories_per_100g")}
+						>
+							Kcal/100g {sortField === "calories_per_100g" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+						</th>
+						<th
+							className="text-center"
+							style={{ cursor: "pointer", userSelect: "none", width: "90px" }}
+							onClick={() => handleSort("plan_count")}
+						>
+							Usage {sortField === "plan_count" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+						</th>
+						<th className="text-end" style={{ width: "160px" }}>Actions</th>
 					</tr>
 				</thead>
 				<tbody>
-					{meals.map((meal) => (
+					{sortedMeals.map((meal) => (
 						<tr key={meal.id}>
-							<td>
+							<td className="text-center align-middle">
 								{(meal.representative_image ?? meal.meal_images?.[0]?.path) && (
 									<div
 										style={{ position: "relative", display: "inline-block" }}
@@ -99,19 +146,25 @@ const ListMeals: React.FC = () => {
 								{Boolean(meal.suitable_for_weekend) && (
 									<span className="badge bg-success ms-2">Weekend</span>
 								)}
+							</td>
+							<td className="text-center align-middle">
 								{meal.calorie_tier === "low" && (
-									<span className="badge bg-success ms-2">{meal.calories_per_100g} kcal/100g</span>
+									<span className="badge bg-success">{meal.calories_per_100g}</span>
 								)}
 								{meal.calorie_tier === "medium" && (
-									<span className="badge bg-warning text-dark ms-2">{meal.calories_per_100g} kcal/100g</span>
+									<span className="badge bg-warning text-dark">{meal.calories_per_100g}</span>
 								)}
 								{meal.calorie_tier === "high" && (
-									<span className="badge bg-danger ms-2">{meal.calories_per_100g} kcal/100g</span>
-								)}							{(meal.plan_count ?? 0) > 0 && (
-								<span className="badge bg-secondary ms-2" title="Number of meal plans this meal appears in">📅 {meal.plan_count}</span>
-							)}							</td>
-							<td>
-								<div className="d-flex justify-content-center gap-2">
+									<span className="badge bg-danger">{meal.calories_per_100g}</span>
+								)}
+							</td>
+							<td className="text-center align-middle">
+								{(meal.plan_count ?? 0) > 0 && (
+									<span className="badge bg-secondary" title="Number of meal plans this meal appears in">{meal.plan_count}</span>
+								)}
+							</td>
+							<td className="text-end align-middle">
+								<div className="d-flex justify-content-end gap-2">
 									<MealForm initialMeal={meal} />
 									<button
 										className="btn btn-danger"
