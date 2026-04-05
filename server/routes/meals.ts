@@ -138,6 +138,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 				include: {
 					meal_images: { orderBy: { sort_order: "asc" } },
 					meal_ingredients: { include: { ingredients: true } },
+					_count: { select: { meal_plan_days: true } },
 				},
 			}),
 			prisma.app_settings.findMany({
@@ -178,7 +179,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 						: calories_per_100g > highThreshold
 							? "high"
 							: "medium";
-			return { ...meal, total_calories: total, calories_per_100g, calorie_tier };
+			return { ...meal, total_calories: total, calories_per_100g, calorie_tier, plan_count: meal._count.meal_plan_days };
 		});
 
 		res.json(mealsWithCalories);

@@ -18,6 +18,7 @@ interface Meal {
 	total_calories?: number | null;
 	calories_per_100g?: number | null;
 	calorie_tier?: "low" | "medium" | "high" | null;
+	plan_count?: number;
 }
 
 const ListMeals: React.FC = () => {
@@ -106,8 +107,9 @@ const ListMeals: React.FC = () => {
 								)}
 								{meal.calorie_tier === "high" && (
 									<span className="badge bg-danger ms-2">{meal.calories_per_100g} kcal/100g</span>
-								)}
-							</td>
+								)}							{(meal.plan_count ?? 0) > 0 && (
+								<span className="badge bg-secondary ms-2" title="Number of meal plans this meal appears in">📅 {meal.plan_count}</span>
+							)}							</td>
 							<td>
 								<div className="d-flex justify-content-center gap-2">
 									<MealForm initialMeal={meal} />

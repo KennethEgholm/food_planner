@@ -28,7 +28,7 @@ Food Planner is a web application designed to help users plan their meals for th
     - Uploaded images must be stored as files in a folder on the server.
     - A meal has a badge: "Low Calorie", "Medium Calorie", "High Calorie". The badge is determined by the total calories of the meal, which is calculated based on the calories of its ingredients and their quantities.
     - A meal also shows the number of calories/100g.
-
+    - Meal usage stats: The app should track how many meal plans each meal is part of, and display this count in the meals list. This helps users identify their most frequently used meals.
 - **Snacks**: 
     - Snacks are a category similar to meals. They also consist of ingredients.
     - A snack can have zero to many images attached to it. The images are shown as thumbnails and when pressed the image is shown in full size.
