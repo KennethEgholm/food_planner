@@ -32,6 +32,8 @@ jobs:
             echo "BOOTSTRAP_ADMIN_EMAIL=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
             echo "VITE_API_URL=${{ secrets.VITE_API_URL }}"
             echo "TUNNEL_TOKEN=${{ secrets.TUNNEL_TOKEN }}"
+            echo "CF_TEAM_DOMAIN=${{ secrets.CF_TEAM_DOMAIN }}"
+            echo "CF_AUD=${{ secrets.CF_AUD }}"
           } > .env
 
       - name: Backup database
