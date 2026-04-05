@@ -1,0 +1,65 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write .env
+        run: |
+          {
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}"
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}"
+            echo "POSTGRES_DB=${{ secrets.POSTGRES_DB }}"
+            echo "SERVER_PORT=${{ secrets.SERVER_PORT }}"
+            echo "CLIENT_PORT=${{ secrets.CLIENT_PORT }}"
+            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"
+            echo "GOOGLE_TASK_CLIENT_ID=${{ secrets.GOOGLE_TASK_CLIENT_ID }}"
+            echo "GOOGLE_TASK_CLIENT_SECRET=${{ secrets.GOOGLE_TASK_CLIENT_SECRET }}"
+            echo "BOOTSTRAP_ADMIN_EMAIL=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
+            echo "VITE_API_URL=${{ secrets.VITE_API_URL }}"
+            echo "TUNNEL_TOKEN=${{ secrets.TUNNEL_TOKEN }}"
+          } > .env
+
+      - name: Backup database
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        run: |
+          BACKUP_DIR="/opt/food_planner/backups"
+          mkdir -p "$BACKUP_DIR"
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          BACKUP_FILE="${BACKUP_DIR}/food_planner_${TIMESTAMP}.sql.gz"
+          if docker ps --format '{{.Names}}' | grep -q "^food_planner_db$"; then
+            echo "Backing up database to ${BACKUP_FILE} ..."
+            docker exec food_planner_db \
+              pg_dump -U "${POSTGRES_USER}" "${POSTGRES_DB}" \
+              | gzip > "$BACKUP_FILE"
+            echo "Backup complete: $(du -h "$BACKUP_FILE" | cut -f1)"
+          else
+            echo "WARNING: food_planner_db not running -- skipping backup."
+          fi
+
+      - name: Prune old backups
+        run: |
+          BACKUP_DIR="/opt/food_planner/backups"
+          ls -1t "${BACKUP_DIR}"/food_planner_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm --
+          echo "Kept 10 most recent backups."
+
+      - name: Deploy
+        run: |
+          docker compose -f docker-compose.prod.yml up --build -d
+          echo "Deploy complete."

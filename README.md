@@ -46,22 +46,46 @@ Navigating directly to `/plans/42` will load the plans list and immediately open
 Nginx is already configured with `try_files ... /index.html` so all routes are served correctly in production.
 
 ### Deploy to production
-Use the `deploy.sh` script instead of calling `docker compose` directly. It automatically backs up the database before deploying:
+
+Deployments are automated via **GitHub Actions** with a self-hosted runner installed directly on the production host (not in Docker — the workflow needs native Docker access to run `docker compose` and `docker exec`).
+
+Every push to `main` (and any manual `workflow_dispatch` trigger) runs `.github/workflows/deploy.yml`, which:
+1. Checks out the repo
+2. Writes `.env` from GitHub Actions secrets
+3. Dumps the running PostgreSQL database to `/opt/food_planner/backups/food_planner_<timestamp>.sql.gz`
+4. Retains the 10 most recent backups (older ones are pruned automatically)
+5. Runs `docker compose -f docker-compose.prod.yml up --build -d`
+
+If the database container is not running (e.g. first ever deploy), the backup step is skipped with a warning.
+
+#### One-time setup on the production host
+
+1. Install the GitHub Actions runner directly on the host — GitHub → repo → **Settings → Actions → Runners → New self-hosted runner** and follow the instructions
+2. Create the backup directory and give the runner user write access:
+   ```bash
+   sudo mkdir -p /opt/food_planner/backups
+   sudo chown <runner-user>: /opt/food_planner/backups
+   ```
+3. Add the following secrets in GitHub → **Settings → Secrets and variables → Actions**:
+
+| Secret | Description |
+|---|---|
+| `POSTGRES_USER` | DB username |
+| `POSTGRES_PASSWORD` | DB password |
+| `POSTGRES_DB` | DB name |
+| `SERVER_PORT` | Host port for the server container |
+| `CLIENT_PORT` | Host port for the client container |
+| `DATABASE_URL` | Full PostgreSQL connection URL |
+| `GOOGLE_TASK_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_TASK_CLIENT_SECRET` | Google OAuth client secret |
+| `BOOTSTRAP_ADMIN_EMAIL` | Email to bootstrap the first admin |
+| `VITE_API_URL` | Public URL of the app (used by Vite at build time) |
+| `TUNNEL_TOKEN` | Cloudflare tunnel token |
+
+#### Restore from a backup
 
 ```bash
-./deploy.sh
-```
-
-What it does:
-1. Dumps the running PostgreSQL database to `backups/food_planner_<timestamp>.sql.gz`
-2. Retains the 10 most recent backups (older ones are pruned automatically)
-3. Runs `docker compose -f docker-compose.prod.yml up --build -d`
-
-If the database container is not running (e.g. first ever deploy), it asks for confirmation before proceeding without a backup.
-
-To restore from a backup:
-```bash
-gunzip -c backups/food_planner_<timestamp>.sql.gz | \
+gunzip -c /opt/food_planner/backups/food_planner_<timestamp>.sql.gz | \
   docker exec -i food_planner_db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
 ```
 
@@ -71,3 +95,4 @@ Console: https://console.x.ai/team/111e5b4c-e96e-41f6-9df2-a969182e6033
 ### Run the app locally:
 - cd client && npm run dev
 - cd server && npm run dev
+
