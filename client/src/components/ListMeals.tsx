@@ -19,9 +19,10 @@ interface Meal {
 	calories_per_100g?: number | null;
 	calorie_tier?: "low" | "medium" | "high" | null;
 	plan_count?: number;
+	created_at?: string | null;
 }
 
-type SortField = "name" | "calories_per_100g" | "plan_count";
+type SortField = "name" | "calories_per_100g" | "plan_count" | "created_at";
 type SortDir = "asc" | "desc";
 
 const ListMeals: React.FC = () => {
@@ -47,8 +48,12 @@ const ListMeals: React.FC = () => {
 			const aVal = a.calories_per_100g ?? -1;
 			const bVal = b.calories_per_100g ?? -1;
 			cmp = aVal - bVal;
-		} else {
+		} else if (sortField === "plan_count") {
 			cmp = (a.plan_count ?? 0) - (b.plan_count ?? 0);
+		} else {
+			const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+			const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+			cmp = aDate - bDate;
 		}
 		return sortDir === "asc" ? cmp : -cmp;
 	});
@@ -100,6 +105,13 @@ const ListMeals: React.FC = () => {
 							onClick={() => handleSort("plan_count")}
 						>
 							Usage {sortField === "plan_count" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+						</th>
+						<th
+							className="text-center"
+							style={{ cursor: "pointer", userSelect: "none", width: "110px" }}
+							onClick={() => handleSort("created_at")}
+						>
+							Created {sortField === "created_at" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
 						</th>
 						<th className="text-end" style={{ width: "160px" }}>Actions</th>
 					</tr>
@@ -162,8 +174,9 @@ const ListMeals: React.FC = () => {
 								{(meal.plan_count ?? 0) > 0 && (
 									<span className="badge bg-secondary" title="Number of meal plans this meal appears in">{meal.plan_count}</span>
 								)}
-							</td>
-							<td className="text-end align-middle">
+							</td>						<td className="text-center align-middle" style={{ fontSize: "0.8em", color: "#888" }}>
+							{meal.created_at ? new Date(meal.created_at).toLocaleDateString() : ""}
+						</td>							<td className="text-end align-middle">
 								<div className="d-flex justify-content-end gap-2">
 									<MealForm initialMeal={meal} />
 									<button

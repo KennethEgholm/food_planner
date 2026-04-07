@@ -17,6 +17,7 @@ interface Meal {
 	total_calories?: number | null;
 	calories_per_100g?: number | null;
 	calorie_tier?: "low" | "medium" | "high" | null;
+	created_at?: string | null;
 }
 
 interface Ingredient {
@@ -651,6 +652,11 @@ const MealForm: React.FC<MealFormProps> = ({
 								{initialMeal.total_calories != null && (
 									<span className="badge fs-6 bg-secondary">
 										{initialMeal.total_calories} kcal total
+									</span>
+								)}
+								{initialMeal.created_at && (
+									<span className="text-muted" style={{ fontSize: "0.8em" }}>
+										Added {new Date(initialMeal.created_at).toLocaleDateString()}
 									</span>
 								)}
 							</div>

@@ -30,7 +30,7 @@ services:
     build: ./client
     container_name: food_planner_client
     ports:
-      - "${CLIENT_PORT}:5173"
+      - "${CLIENT_PORT}:5174"
     environment:
       - VITE_API_URL=http://server:${SERVER_PORT}
     depends_on:

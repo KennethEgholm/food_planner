@@ -80,6 +80,7 @@ model meals {
   name                 String             @unique @db.VarChar(255)
   suitable_for_weekend Boolean?           @default(false)
   representative_image String?            @db.VarChar(512)
+  created_at           DateTime           @default(now())
   meal_ingredients     meal_ingredients[]
   meal_plan_days       meal_plan_days[]
   meal_images          meal_images[]
