@@ -24,6 +24,14 @@ model app_settings {
   value String?
 }
 
+model app_logs {
+  id         Int      @id @default(autoincrement())
+  level      String   @db.VarChar(20)
+  source     String   @db.VarChar(100)
+  message    String
+  created_at DateTime @default(now())
+}
+
 model user_google_tokens {
   user_email String @id @db.VarChar(255)
   tokens     String

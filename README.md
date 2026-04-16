@@ -35,11 +35,13 @@ The app uses client-side routing (`react-router-dom`). Each tab has its own URL:
 
 | URL | Content |
 |---|---|
+| `/current-plan` | Current meal plan |
 | `/plans` | Meal Plans tab |
 | `/plans/:id` | Meal Plans tab — auto-opens the modal for plan `id` |
 | `/meals` | Meals tab |
 | `/snacks` | Snacks tab |
 | `/ingredients` | Ingredients tab |
+| `/settings` | Settings (AI config, logs) |
 
 Navigating directly to `/plans/42` will load the plans list and immediately open the detail modal for plan 42. Closing the modal navigates back to `/plans`.
 
@@ -88,6 +90,10 @@ If the database container is not running (e.g. first ever deploy), the backup st
 gunzip -c /opt/food_planner/backups/food_planner_<timestamp>.sql.gz | \
   docker exec -i food_planner_db psql -U "$POSTGRES_USER" "$POSTGRES_DB"
 ```
+
+### Application Logs
+
+Errors from external API calls (image generation, calorie AI, meal plan AI, Google OAuth, Google Tasks export) are written to the `app_logs` database table. Logs can be viewed and cleared from the **Settings** page under the collapsible "Logs" section.
 
 ### AI usage: Grok
 Console: https://console.x.ai/team/111e5b4c-e96e-41f6-9df2-a969182e6033

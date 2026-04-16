@@ -3,6 +3,7 @@ import { google } from "googleapis";
 import { prisma } from "../db";
 import { getUser, requireAdmin } from "../middleware/auth";
 import { generateAIMealPlan } from "../utils/aiMealPlan";
+import { appLog } from "../utils/appLog";
 import { getAuthenticatedClient } from "./auth";
 
 const router = Router();
@@ -519,7 +520,7 @@ router.post(
 			});
 		} catch (err: unknown) {
 			if (err instanceof Error) {
-				console.error("Export error:", err);
+				appLog("error", "google-tasks", `Export failed: ${err.message}`);
 				// Surface auth errors as 401 so the client knows to re-connect
 				const isAuthError = err.message.includes("invalid_grant") ||
 					err.message.includes("Invalid Credentials") ||
@@ -532,6 +533,7 @@ router.post(
 					res.status(500).send(`Export failed: ${err.message}`);
 				}
 			} else {
+				appLog("error", "google-tasks", "Export failed: Unknown error");
 				res.status(500).send("Export failed: Unknown error");
 			}
 		}

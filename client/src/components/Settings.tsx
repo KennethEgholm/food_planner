@@ -40,6 +40,9 @@ const Settings: React.FC = () => {
 	const [mealPlanAiOpen, setMealPlanAiOpen] = useState(false);
 	const [savingPreference, setSavingPreference] = useState(false);
 	const [savedPreference, setSavedPreference] = useState(false);
+	const [logsOpen, setLogsOpen] = useState(false);
+	const [logs, setLogs] = useState<{ id: number; level: string; source: string; message: string; created_at: string }[]>([]);
+	const [logsLoading, setLogsLoading] = useState(false);
 
 	useEffect(() => {
 		axios
@@ -121,6 +124,33 @@ const Settings: React.FC = () => {
 		} finally {
 			setSavingPreference(false);
 		}
+	};
+
+	const fetchLogs = async () => {
+		setLogsLoading(true);
+		try {
+			const res = await axios.get("/api/settings/logs");
+			setLogs(res.data);
+		} catch {
+			setError("Failed to load logs.");
+		} finally {
+			setLogsLoading(false);
+		}
+	};
+
+	const clearLogs = async () => {
+		try {
+			await axios.delete("/api/settings/logs");
+			setLogs([]);
+		} catch {
+			setError("Failed to clear logs.");
+		}
+	};
+
+	const handleToggleLogs = () => {
+		const willOpen = !logsOpen;
+		setLogsOpen(willOpen);
+		if (willOpen) fetchLogs();
 	};
 
 	const renderField = (field: SettingField, suffix?: React.ReactNode) => (
@@ -265,6 +295,57 @@ const Settings: React.FC = () => {
 			>
 				{backfillingImages ? "Starting…" : "Backfill missing images via AI"}
 			</button>
+
+			<hr className="my-4" />
+
+			<button
+				type="button"
+				className="btn btn-link p-0 text-decoration-none d-flex align-items-center gap-1 mb-1"
+				onClick={handleToggleLogs}
+				aria-expanded={logsOpen}
+			>
+				<h5 className="mb-0">Logs</h5>
+				<span>{logsOpen ? "▲" : "▼"}</span>
+			</button>
+			<p className="text-muted small mb-3">Recent application logs (image generation errors, etc.).</p>
+			{logsOpen && (
+				<div>
+					<div className="d-flex gap-2 mb-3">
+						<button type="button" className="btn btn-outline-secondary btn-sm" onClick={fetchLogs} disabled={logsLoading}>
+							{logsLoading ? "Loading…" : "Refresh"}
+						</button>
+						{logs.length > 0 && (
+							<button type="button" className="btn btn-outline-danger btn-sm" onClick={clearLogs}>
+								Clear Logs
+							</button>
+						)}
+					</div>
+					{logs.length === 0 ? (
+						<p className="text-muted">No logs.</p>
+					) : (
+						<div className="table-responsive">
+							<table className="table table-sm table-striped" style={{ fontSize: "0.85em" }}>
+								<thead>
+									<tr>
+										<th style={{ width: "150px" }}>Time</th>
+										<th style={{ width: "100px" }}>Source</th>
+										<th>Message</th>
+									</tr>
+								</thead>
+								<tbody>
+									{logs.map((log) => (
+										<tr key={log.id}>
+											<td className="text-muted">{new Date(log.created_at).toLocaleString()}</td>
+											<td><span className={`badge ${log.level === "error" ? "bg-danger" : log.level === "warn" ? "bg-warning text-dark" : "bg-info"}`}>{log.source}</span></td>
+											<td style={{ wordBreak: "break-word" }}>{log.message}</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 };

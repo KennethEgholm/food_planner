@@ -32,4 +32,29 @@ router.put("/:key", requireAdmin, async (req: Request, res: Response) => {
 	}
 });
 
+// Get recent logs
+router.get("/logs", requireAdmin, async (_req: Request, res: Response) => {
+	try {
+		const logs = await prisma.app_logs.findMany({
+			orderBy: { created_at: "desc" },
+			take: 100,
+		});
+		res.json(logs);
+	} catch (err: any) {
+		console.error(err.message);
+		res.status(500).send("Server Error");
+	}
+});
+
+// Clear all logs
+router.delete("/logs", requireAdmin, async (_req: Request, res: Response) => {
+	try {
+		await prisma.app_logs.deleteMany();
+		res.json("Logs cleared");
+	} catch (err: any) {
+		console.error(err.message);
+		res.status(500).send("Server Error");
+	}
+});
+
 export default router;

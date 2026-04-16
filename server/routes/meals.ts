@@ -4,6 +4,7 @@ import express, { type Request, type Response } from "express";
 import multer from "multer";
 import { prisma } from "../db";
 import { requireAdmin } from "../middleware/auth";
+import { appLog } from "../utils/appLog";
 
 const router = express.Router();
 
@@ -56,19 +57,22 @@ async function generateRepresentativeImageIfMissing(mealId: number): Promise<voi
 		});
 		if (!xaiRes.ok) {
 			const errBody = await xaiRes.text();
-			console.error(`[image-gen] xAI API error ${xaiRes.status}: ${errBody}`);
+			appLog("error", "image-gen", `Meal "${meal.name}": xAI API error ${xaiRes.status}: ${errBody}`);
 			return;
 		}
 
 		const xaiData = (await xaiRes.json()) as { data: { url?: string }[] };
 		const imageUrl = xaiData.data?.[0]?.url;
 		if (!imageUrl) {
-			console.error("[image-gen] No image URL in response:", JSON.stringify(xaiData));
+			appLog("error", "image-gen", `Meal "${meal.name}": No image URL in response`);
 			return;
 		}
 
 		const imgRes = await fetch(imageUrl);
-		if (!imgRes.ok) return;
+		if (!imgRes.ok) {
+			appLog("error", "image-gen", `Meal "${meal.name}": Image download failed (${imgRes.status})`);
+			return;
+		}
 
 		const buffer = Buffer.from(await imgRes.arrayBuffer());
 		const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
@@ -80,7 +84,7 @@ async function generateRepresentativeImageIfMissing(mealId: number): Promise<voi
 			data: { representative_image: filePath },
 		});
 	} catch (err: unknown) {
-		if (err instanceof Error) console.error("Auto-generate image failed:", err.message);
+		if (err instanceof Error) appLog("error", "image-gen", `Meal image failed: ${err.message}`);
 	}
 }
 

@@ -2,6 +2,7 @@ import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
 import { prisma } from "../db";
 import { getUser } from "../middleware/auth";
+import { appLog } from "../utils/appLog";
 
 const router = Router();
 
@@ -96,7 +97,7 @@ router.get("/callback", async (req: Request, res: Response) => {
 			throw new Error("Missing required env var: CLIENT_PORT");
 		res.redirect(`${frontendBase}${returnPath}`);
 	} catch (err: any) {
-		console.error("Error retrieving access token:", err.message);
+		appLog("error", "google-oauth", `Token exchange failed: ${err.message}`);
 		res.status(500).send("Authentication failed");
 	}
 });
@@ -138,8 +139,8 @@ export const getAuthenticatedClient = async (userEmail: string) => {
 				where: { user_email: userEmail },
 				data: { tokens: JSON.stringify(merged) },
 			});
-		} catch (err) {
-			console.error("Failed to save refreshed tokens:", err);
+		} catch (err: any) {
+			appLog("error", "google-oauth", `Token refresh save failed: ${err.message ?? err}`);
 		}
 	});
 

@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { appLog } from "./appLog";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const WEEKEND_DAYS = new Set(["Saturday", "Sunday"]);
@@ -126,7 +127,9 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 
 	if (!res.ok) {
 		const body = await res.text();
-		throw new Error(`AI API error ${res.status}: ${body}`);
+		const msg = `AI API error ${res.status}: ${body}`;
+		appLog("error", "meal-plan-ai", msg);
+		throw new Error(msg);
 	}
 
 	const data = (await res.json()) as {
@@ -141,11 +144,15 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 	try {
 		parsed = JSON.parse(jsonText);
 	} catch {
-		throw new Error(`AI returned invalid JSON: ${raw.slice(0, 200)}`);
+		const msg = `AI returned invalid JSON: ${raw.slice(0, 200)}`;
+		appLog("error", "meal-plan-ai", msg);
+		throw new Error(msg);
 	}
 
 	if (!Array.isArray(parsed.days) || !Array.isArray(parsed.snack_ids)) {
-		throw new Error(`AI response missing required fields: ${raw.slice(0, 200)}`);
+		const msg = `AI response missing required fields: ${raw.slice(0, 200)}`;
+		appLog("error", "meal-plan-ai", msg);
+		throw new Error(msg);
 	}
 
 	const mealIdSet = new Set(allMeals.map((m) => m.id));
@@ -174,9 +181,9 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 	}
 
 	if (validatedDays.length < 7) {
-		throw new Error(
-			`AI did not produce valid entries for all 7 days (got ${validatedDays.length}).`,
-		);
+		const msg = `AI did not produce valid entries for all 7 days (got ${validatedDays.length}).`;
+		appLog("error", "meal-plan-ai", msg);
+		throw new Error(msg);
 	}
 
 	// Validate snacks (silently drop invalid IDs)

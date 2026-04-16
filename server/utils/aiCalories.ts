@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { appLog } from "./appLog";
 
 /**
  * Asks the configured AI model for the approximate calories per 100g
@@ -38,7 +39,11 @@ export async function getCaloriesPerHundredGrams(
 			}),
 		});
 
-		if (!res.ok) return null;
+		if (!res.ok) {
+			const body = await res.text();
+			appLog("error", "calorie-ai", `"${ingredientName}": API error ${res.status}: ${body}`);
+			return null;
+		}
 
 		const data = (await res.json()) as {
 			choices?: { message?: { content?: string } }[];
@@ -47,8 +52,7 @@ export async function getCaloriesPerHundredGrams(
 		const calories = Number.parseInt(text, 10);
 		return Number.isFinite(calories) && calories >= 0 ? calories : null;
 	} catch (err: unknown) {
-		if (err instanceof Error)
-			console.error("AI calorie autofill failed:", err.message);
+		if (err instanceof Error) appLog("error", "calorie-ai", `"${ingredientName}": ${err.message}`);
 		return null;
 	}
 }
