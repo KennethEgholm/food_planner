@@ -13,6 +13,7 @@ interface Meal {
 	id: number;
 	name: string;
 	suitable_for_weekend: number | boolean;
+	suitable_for_lunch: boolean;
 	representative_image?: string | null;
 	meal_images?: MealImage[];
 	total_calories?: number | null;
@@ -22,7 +23,7 @@ interface Meal {
 	created_at?: string | null;
 }
 
-type SortField = "name" | "calories_per_100g" | "plan_count" | "created_at";
+type SortField = "name" | "calories_per_100g" | "plan_count" | "created_at" | "suitable_for_lunch";
 type SortDir = "asc" | "desc";
 
 const ListMeals: React.FC = () => {
@@ -50,6 +51,8 @@ const ListMeals: React.FC = () => {
 			cmp = aVal - bVal;
 		} else if (sortField === "plan_count") {
 			cmp = (a.plan_count ?? 0) - (b.plan_count ?? 0);
+		} else if (sortField === "suitable_for_lunch") {
+			cmp = Number(a.suitable_for_lunch) - Number(b.suitable_for_lunch);
 		} else {
 			const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
 			const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -91,6 +94,13 @@ const ListMeals: React.FC = () => {
 							onClick={() => handleSort("name")}
 						>
 							Meal Name {sortField === "name" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+						</th>
+						<th
+							className="text-center"
+							style={{ cursor: "pointer", userSelect: "none", width: "100px" }}
+							onClick={() => handleSort("suitable_for_lunch")}
+						>
+							Lunch {sortField === "suitable_for_lunch" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
 						</th>
 						<th
 							className="text-center"
@@ -157,6 +167,11 @@ const ListMeals: React.FC = () => {
 								<MealForm initialMeal={meal} readOnly />{" "}
 								{Boolean(meal.suitable_for_weekend) && (
 									<span className="badge bg-success ms-2">Weekend</span>
+								)}
+							</td>
+							<td className="text-center align-middle">
+								{meal.suitable_for_lunch && (
+									<span className="badge bg-info">Lunch</span>
 								)}
 							</td>
 							<td className="text-center align-middle">

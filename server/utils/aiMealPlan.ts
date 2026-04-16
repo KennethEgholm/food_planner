@@ -4,7 +4,7 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 const WEEKEND_DAYS = new Set(["Saturday", "Sunday"]);
 
 export interface AIMealPlanResult {
-	days: { day: string; meal_id: number }[];
+	days: { day: string; meal_id: number; lunch_meal_id?: number }[];
 	snack_ids: number[];
 }
 
@@ -38,7 +38,7 @@ export async function generateAIMealPlan(): Promise<AIMealPlanResult> {
 
 	// ── Load meals & snacks ──────────────────────────────────────────────────
 	const [allMeals, allSnacks] = await Promise.all([
-		prisma.meals.findMany({ select: { id: true, name: true, suitable_for_weekend: true } }),
+		prisma.meals.findMany({ select: { id: true, name: true, suitable_for_weekend: true, suitable_for_lunch: true } }),
 		prisma.snacks.findMany({ select: { id: true, name: true } }),
 	]);
 
@@ -48,6 +48,8 @@ export async function generateAIMealPlan(): Promise<AIMealPlanResult> {
 	if (weekendMeals.length < 2) {
 		throw new Error("At least 2 meals must be marked 'Suitable for weekends' to generate a plan.");
 	}
+
+	const lunchMeals = allMeals.filter((m) => m.suitable_for_lunch);
 
 	// ── Load last 3 meal plans for variety context ───────────────────────────
 	const recentPlans = await prisma.meal_plans.findMany({
@@ -72,7 +74,13 @@ export async function generateAIMealPlan(): Promise<AIMealPlanResult> {
 
 	// ── Build prompt ─────────────────────────────────────────────────────────
 	const mealsListText = allMeals
-		.map((m) => `${m.id}. ${m.name} (${m.suitable_for_weekend ? "weekend ok" : "weekday only"})`)
+		.map((m) => {
+			const tags = [];
+			if (m.suitable_for_weekend) tags.push("weekend ok");
+			if (m.suitable_for_lunch) tags.push("lunch ok");
+			const tagStr = tags.length > 0 ? tags.join(", ") : "weekday only";
+			return `${m.id}. ${m.name} (${tagStr})`;
+		})
 		.join("\n");
 
 	const snacksListText =
@@ -80,7 +88,7 @@ export async function generateAIMealPlan(): Promise<AIMealPlanResult> {
 			? allSnacks.map((s) => `${s.id}. ${s.name}`).join("\n")
 			: "No snacks available.";
 
-	const prompt = `You are a meal planner. Here are all available meals (id. name, weekend availability):
+	const prompt = `You are a meal planner. Here are all available meals (id. name, tags):
 ${mealsListText}
 
 Here are all available snacks (id. name):
@@ -92,14 +100,15 @@ ${recentPlansText || "No previous plans."}
 User preference: ${preference}
 
 Create a 7-day meal plan (Monday–Sunday). Rules:
-- Weekdays (Monday–Friday): any meal may be used.
-- Saturday and Sunday: ONLY use meals marked "weekend ok".
+- Weekdays (Monday–Friday): any meal may be used for dinner.
+- Saturday and Sunday: ONLY use meals tagged "weekend ok" for dinner.
+- Saturday and Sunday: also pick a lunch meal tagged "lunch ok" (if any exist). If no lunch meals exist, omit lunch_meal_id.
 - Pick between 1 and 3 snacks from the snacks list (or [] if none available).
 - Try to avoid repeating meals from the recent plans above.
-- Use each meal id only once in the plan.
+- Use each meal id only once across all dinner slots. Lunch meals may reuse ids from the dinner pool only if no other option exists.
 
 Respond ONLY with valid JSON, no markdown, no explanation:
-{"days":[{"day":"Monday","meal_id":1},{"day":"Tuesday","meal_id":4},{"day":"Wednesday","meal_id":7},{"day":"Thursday","meal_id":2},{"day":"Friday","meal_id":5},{"day":"Saturday","meal_id":3},{"day":"Sunday","meal_id":6}],"snack_ids":[1,3]}`;
+{"days":[{"day":"Monday","meal_id":1},{"day":"Tuesday","meal_id":4},{"day":"Wednesday","meal_id":7},{"day":"Thursday","meal_id":2},{"day":"Friday","meal_id":5},{"day":"Saturday","meal_id":3,"lunch_meal_id":8},{"day":"Sunday","meal_id":6,"lunch_meal_id":9}],"snack_ids":[1,3]}`;
 
 	// ── Call AI ───────────────────────────────────────────────────────────────
 	const res = await fetch(`${baseUrl}/chat/completions`, {
@@ -128,7 +137,7 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 	// ── Parse & validate response ─────────────────────────────────────────────
 	// Strip markdown code fences in case the AI wraps in ```json```
 	const jsonText = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-	let parsed: { days: { day: string; meal_id: number }[]; snack_ids: number[] };
+	let parsed: { days: { day: string; meal_id: number; lunch_meal_id?: number }[]; snack_ids: number[] };
 	try {
 		parsed = JSON.parse(jsonText);
 	} catch {
@@ -141,16 +150,27 @@ Respond ONLY with valid JSON, no markdown, no explanation:
 
 	const mealIdSet = new Set(allMeals.map((m) => m.id));
 	const weekendMealIdSet = new Set(weekendMeals.map((m) => m.id));
+	const lunchMealIdSet = new Set(lunchMeals.map((m) => m.id));
 	const snackIdSet = new Set(allSnacks.map((s) => s.id));
 
 	// Validate each day
-	const validatedDays: { day: string; meal_id: number }[] = [];
+	const validatedDays: { day: string; meal_id: number; lunch_meal_id?: number }[] = [];
 	for (const dayEntry of parsed.days) {
 		if (!DAYS.includes(dayEntry.day)) continue;
 		if (!mealIdSet.has(dayEntry.meal_id)) continue;
-		// Weekend constraint
+		// Weekend constraint for dinner
 		if (WEEKEND_DAYS.has(dayEntry.day) && !weekendMealIdSet.has(dayEntry.meal_id)) continue;
-		validatedDays.push({ day: dayEntry.day, meal_id: dayEntry.meal_id });
+		const entry: { day: string; meal_id: number; lunch_meal_id?: number } = {
+			day: dayEntry.day,
+			meal_id: dayEntry.meal_id,
+		};
+		// Lunch meal only for weekend days, and only if it's tagged lunch ok
+		if (WEEKEND_DAYS.has(dayEntry.day) && dayEntry.lunch_meal_id != null) {
+			if (lunchMealIdSet.has(dayEntry.lunch_meal_id)) {
+				entry.lunch_meal_id = dayEntry.lunch_meal_id;
+			}
+		}
+		validatedDays.push(entry);
 	}
 
 	if (validatedDays.length < 7) {

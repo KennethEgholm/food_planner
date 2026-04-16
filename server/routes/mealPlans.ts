@@ -92,8 +92,11 @@ router.post("/random", requireAdmin, async (req: Request, res: Response) => {
 			return array;
 		};
 
+		const lunchMeals = allMeals.filter((m: any) => m.suitable_for_lunch);
+
 		let availableWeekMeals = [...allMeals];
 		let availableWeekendMeals = [...weekendMeals];
+		let availableLunchMeals = [...lunchMeals];
 
 		const daysToCreate = [];
 
@@ -115,11 +118,23 @@ router.post("/random", requireAdmin, async (req: Request, res: Response) => {
 			}
 
 			if (pickedMeal) {
-				daysToCreate.push({
+				const entry: any = {
 					meal_plan_id: newPlan.id,
 					day: day,
 					meal_id: pickedMeal.id,
-				});
+				};
+
+				// Pick a lunch meal for weekend days
+				if ((day === "Saturday" || day === "Sunday") && lunchMeals.length > 0) {
+					if (availableLunchMeals.length === 0) {
+						availableLunchMeals = [...lunchMeals];
+					}
+					shuffleArray(availableLunchMeals);
+					const pickedLunch = availableLunchMeals.pop();
+					if (pickedLunch) entry.lunch_meal_id = pickedLunch.id;
+				}
+
+				daysToCreate.push(entry);
 			}
 		}
 
@@ -158,7 +173,7 @@ router.post("/ai", requireAdmin, async (req: Request, res: Response) => {
 
 		if (days.length > 0) {
 			await prisma.meal_plan_days.createMany({
-				data: days.map((d) => ({ meal_plan_id: newPlan.id, day: d.day, meal_id: d.meal_id })),
+				data: days.map((d) => ({ meal_plan_id: newPlan.id, day: d.day, meal_id: d.meal_id, lunch_meal_id: d.lunch_meal_id ?? null })),
 			});
 		}
 
@@ -206,6 +221,7 @@ router.get("/current", async (_req: Request, res: Response) => {
 			where: { meal_plan_id: plan.id },
 			include: {
 				meals: true,
+				lunch_meal: true,
 			},
 		});
 
@@ -223,8 +239,11 @@ router.get("/current", async (_req: Request, res: Response) => {
 			.map((d: any) => ({
 				day: d.day,
 				meal_id: d.meal_id,
-				meal_name: d.meals?.name,
+				meal_name: d.meals?.name ?? null,
 				meal_image: d.meals?.representative_image ?? null,
+				lunch_meal_id: d.lunch_meal_id ?? null,
+				lunch_meal_name: d.lunch_meal?.name ?? null,
+				lunch_meal_image: d.lunch_meal?.representative_image ?? null,
 			}))
 			.sort(
 				(a: any, b: any) => (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0),
@@ -267,6 +286,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 			where: { meal_plan_id: planId },
 			include: {
 				meals: true,
+				lunch_meal: true,
 			},
 		});
 
@@ -285,8 +305,11 @@ router.get("/:id", async (req: Request, res: Response) => {
 			.map((d: any) => ({
 				day: d.day,
 				meal_id: d.meal_id,
-				meal_name: d.meals?.name,
-				meal_image: d.meals?.image_path,
+				meal_name: d.meals?.name ?? null,
+				meal_image: d.meals?.representative_image ?? null,
+				lunch_meal_id: d.lunch_meal_id ?? null,
+				lunch_meal_name: d.lunch_meal?.name ?? null,
+				lunch_meal_image: d.lunch_meal?.representative_image ?? null,
 			}))
 			.sort((a: any, b: any) => {
 				return (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);
@@ -372,6 +395,14 @@ router.get("/:id/shopping-list", async (req: Request, res: Response) => {
                 FROM meal_plan_days mpd
                 JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
                 WHERE mpd.meal_plan_id = ${planId}
+
+                UNION ALL
+
+                SELECT mi.ingredient_id, mi.quantity
+                FROM meal_plan_days mpd
+                JOIN meal_ingredients mi ON mpd.lunch_meal_id = mi.meal_id
+                WHERE mpd.meal_plan_id = ${planId}
+                AND mpd.lunch_meal_id IS NOT NULL
                 
                 UNION ALL
 
@@ -413,7 +444,15 @@ router.post(
                 FROM meal_plan_days mpd
                 JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
                 WHERE mpd.meal_plan_id = ${planId}
-                
+
+                UNION ALL
+
+                SELECT mi.ingredient_id, mi.quantity
+                FROM meal_plan_days mpd
+                JOIN meal_ingredients mi ON mpd.lunch_meal_id = mi.meal_id
+                WHERE mpd.meal_plan_id = ${planId}
+                AND mpd.lunch_meal_id IS NOT NULL
+
                 UNION ALL
 
                 SELECT si.ingredient_id, si.quantity
@@ -504,7 +543,7 @@ router.put("/:id/days", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
 		const planId = Number.parseInt(id as string, 10);
-		const { day, meal_id } = req.body;
+		const { day, meal_id, lunch_meal_id } = req.body;
 
 		if (!day) {
 			return res.status(400).json("Day is required");
@@ -520,10 +559,12 @@ router.put("/:id/days", requireAdmin, async (req: Request, res: Response) => {
 			create: {
 				meal_plan_id: planId,
 				day: day,
-				meal_id: meal_id,
+				meal_id: meal_id ?? null,
+				lunch_meal_id: lunch_meal_id ?? null,
 			},
 			update: {
-				meal_id: meal_id,
+				...(meal_id !== undefined && { meal_id: meal_id ?? null }),
+				...(lunch_meal_id !== undefined && { lunch_meal_id: lunch_meal_id ?? null }),
 			},
 		});
 

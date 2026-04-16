@@ -5,6 +5,7 @@ import { Fragment, useCallback, useEffect, useState } from "react";
 interface Meal {
 	id: number;
 	name: string;
+	suitable_for_lunch?: boolean;
 }
 
 interface Snack {
@@ -27,6 +28,7 @@ interface MealPlanDay {
 	day: string;
 	meal_id: number;
 	meal_name?: string;
+	lunch_meal_id?: number | null;
 }
 
 interface EditMealPlanProps {
@@ -43,8 +45,11 @@ const DAYS_OF_WEEK = [
 	"Sunday",
 ];
 
+const WEEKEND_DAYS = new Set(["Saturday", "Sunday"]);
+
 const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 	const [daysData, setDaysData] = useState<Record<string, number | null>>({});
+	const [lunchData, setLunchData] = useState<Record<string, number | null>>({});
 	const [allMeals, setAllMeals] = useState<Meal[]>([]);
 	const [allSnacks, setAllSnacks] = useState<Snack[]>([]);
 	const [planSnacks, setPlanSnacks] = useState<PlanSnack[]>([]);
@@ -57,12 +62,17 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 			const data = res.data;
 			// Convert array of days to map
 			const dayMap: Record<string, number | null> = {};
+			const lunchMap: Record<string, number | null> = {};
 			if (data.days) {
 				for (const d of data.days) {
 					dayMap[d.day] = d.meal_id;
+					if (WEEKEND_DAYS.has(d.day)) {
+						lunchMap[d.day] = d.lunch_meal_id ?? null;
+					}
 				}
 			}
 			setDaysData(dayMap);
+			setLunchData(lunchMap);
 			if (data.snacks) {
 				setPlanSnacks(data.snacks);
 			}
@@ -107,20 +117,27 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 		}
 	};
 
-	// Update local state when dropdown changes
+	// Update local state when dinner dropdown changes
 	const handleDayChange = (day: string, value: string) => {
 		const mealId = value === "" ? null : Number(value);
 		setDaysData((prev) => ({ ...prev, [day]: mealId }));
 	};
 
+	// Update local state when lunch dropdown changes
+	const handleLunchChange = (day: string, value: string) => {
+		const mealId = value === "" ? null : Number(value);
+		setLunchData((prev) => ({ ...prev, [day]: mealId }));
+	};
+
 	// Save all changes to server
 	const saveChanges = async () => {
 		try {
-			// Iterate through all days in state and update them
-			const promises = Object.entries(daysData).map(([day, mealId]) =>
+			const allDays = new Set([...Object.keys(daysData), ...Object.keys(lunchData)]);
+			const promises = [...allDays].map((day) =>
 				axios.put(`/api/meal-plans/${mealPlan.id}/days`, {
 					day,
-					meal_id: mealId,
+					meal_id: daysData[day] ?? null,
+					...(WEEKEND_DAYS.has(day) && { lunch_meal_id: lunchData[day] ?? null }),
 				}),
 			);
 			await Promise.all(promises);
@@ -171,28 +188,53 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 								<thead>
 									<tr>
 										<th>Day</th>
-										<th>Meal</th>
+										<th>Dinner</th>
 									</tr>
 								</thead>
 								<tbody>
 									{DAYS_OF_WEEK.map((day) => (
-										<tr key={day}>
-											<td>{day}</td>
-											<td>
-												<select
-													className="form-select"
-													value={daysData[day] || ""}
-													onChange={(e) => handleDayChange(day, e.target.value)}
-												>
-													<option value="">No Meal</option>
-													{allMeals.map((meal) => (
-														<option key={meal.id} value={meal.id}>
-															{meal.name}
-														</option>
-													))}
-												</select>
-											</td>
-										</tr>
+										<Fragment key={day}>
+											<tr>
+												<td>{day}</td>
+												<td>
+													<select
+														className="form-select"
+														value={daysData[day] || ""}
+														onChange={(e) => handleDayChange(day, e.target.value)}
+													>
+														<option value="">No Meal</option>
+														{allMeals.map((meal) => (
+															<option key={meal.id} value={meal.id}>
+																{meal.name}
+															</option>
+														))}
+													</select>
+												</td>
+											</tr>
+											{WEEKEND_DAYS.has(day) && (
+												<tr>
+													<td className="text-muted ps-3" style={{ fontSize: "0.9em" }}>
+														Lunch
+													</td>
+													<td>
+														<select
+															className="form-select form-select-sm"
+															value={lunchData[day] ?? ""}
+															onChange={(e) => handleLunchChange(day, e.target.value)}
+														>
+															<option value="">No Lunch</option>
+															{allMeals
+																.filter((m) => m.suitable_for_lunch)
+																.map((meal) => (
+																	<option key={meal.id} value={meal.id}>
+																		{meal.name}
+																	</option>
+																))}
+														</select>
+													</td>
+												</tr>
+											)}
+										</Fragment>
 									))}
 								</tbody>
 							</table>

@@ -91,7 +91,7 @@ router.post(
 	upload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
-			const { name, suitable_for_weekend } = req.body;
+			const { name, suitable_for_weekend, suitable_for_lunch } = req.body;
 
 			if (!name) {
 				res.status(400).json({ error: "Meal name is required" });
@@ -102,6 +102,8 @@ router.post(
 					name,
 					suitable_for_weekend:
 						suitable_for_weekend === "true" || suitable_for_weekend === true,
+					suitable_for_lunch:
+						suitable_for_lunch === "true" || suitable_for_lunch === true,
 				},
 			});
 
@@ -197,10 +199,10 @@ router.put(
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;
-			const { name, suitable_for_weekend } = req.body;
+			const { name, suitable_for_weekend, suitable_for_lunch } = req.body;
 			const files = req.files as Express.Multer.File[];
 
-			if (name !== undefined || suitable_for_weekend !== undefined) {
+			if (name !== undefined || suitable_for_weekend !== undefined || suitable_for_lunch !== undefined) {
 				await prisma.meals.update({
 					where: { id: Number(id) },
 					data: {
@@ -209,6 +211,11 @@ router.put(
 							suitable_for_weekend:
 								suitable_for_weekend === "true" ||
 								suitable_for_weekend === true,
+						}),
+						...(suitable_for_lunch !== undefined && {
+							suitable_for_lunch:
+								suitable_for_lunch === "true" ||
+								suitable_for_lunch === true,
 						}),
 					},
 				});

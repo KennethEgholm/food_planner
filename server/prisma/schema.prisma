@@ -50,11 +50,13 @@ model meal_ingredients {
 }
 
 model meal_plan_days {
-  meal_plan_id Int
-  day          String     @db.VarChar(20)
-  meal_id      Int?
-  meals        meals?     @relation(fields: [meal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  meal_plans   meal_plans @relation(fields: [meal_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  meal_plan_id  Int
+  day           String     @db.VarChar(20)
+  meal_id       Int?
+  lunch_meal_id Int?
+  meals         meals?     @relation("dinner_meal", fields: [meal_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lunch_meal    meals?     @relation("lunch_meal", fields: [lunch_meal_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  meal_plans    meal_plans @relation(fields: [meal_plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([meal_plan_id, day])
 }
@@ -76,14 +78,16 @@ model meal_plans {
 }
 
 model meals {
-  id                   Int                @id @default(autoincrement())
-  name                 String             @unique @db.VarChar(255)
-  suitable_for_weekend Boolean?           @default(false)
-  representative_image String?            @db.VarChar(512)
-  created_at           DateTime           @default(now())
-  meal_ingredients     meal_ingredients[]
-  meal_plan_days       meal_plan_days[]
-  meal_images          meal_images[]
+  id                      Int                @id @default(autoincrement())
+  name                    String             @unique @db.VarChar(255)
+  suitable_for_weekend    Boolean?           @default(false)
+  suitable_for_lunch      Boolean            @default(false)
+  representative_image    String?            @db.VarChar(512)
+  created_at              DateTime           @default(now())
+  meal_ingredients        meal_ingredients[]
+  meal_plan_days          meal_plan_days[]   @relation("dinner_meal")
+  meal_plan_days_as_lunch meal_plan_days[]   @relation("lunch_meal")
+  meal_images             meal_images[]
 }
 
 model meal_images {

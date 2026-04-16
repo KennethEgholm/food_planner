@@ -6,6 +6,7 @@ interface Meal {
 	id: number;
 	name: string;
 	suitable_for_weekend: number;
+	suitable_for_lunch: number;
 }
 
 interface Ingredient {
@@ -26,6 +27,9 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 	const [name, setName] = useState(meal.name);
 	const [suitableForWeekend, setSuitableForWeekend] = useState(
 		meal.suitable_for_weekend === 1,
+	);
+	const [suitableForLunch, setSuitableForLunch] = useState(
+		meal.suitable_for_lunch === 1,
 	);
 	const [mealIngredients, setMealIngredients] = useState<MealIngredient[]>([]);
 	const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
@@ -77,7 +81,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 	const updateMeal = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
-			const body = { name, suitable_for_weekend: suitableForWeekend ? 1 : 0 };
+			const body = { name, suitable_for_weekend: suitableForWeekend ? 1 : 0, suitable_for_lunch: suitableForLunch ? 1 : 0 };
 			await axios.put(`/api/meals/${meal.id}`, body);
 			window.location.reload();
 		} catch (err: any) {
@@ -109,6 +113,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 				onClick={() => {
 					setName(meal.name);
 					setSuitableForWeekend(meal.suitable_for_weekend === 1);
+					setSuitableForLunch(meal.suitable_for_lunch === 1);
 				}}
 			>
 				<div
@@ -125,6 +130,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 								onClick={() => {
 									setName(meal.name);
 									setSuitableForWeekend(meal.suitable_for_weekend === 1);
+									setSuitableForLunch(meal.suitable_for_lunch === 1);
 								}}
 							/>
 						</div>
@@ -162,20 +168,21 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 								</label>
 							</div>
 
-							<h5>Ingredients</h5>
-							<div className="input-group mb-3">
-								<select
-									className="form-select"
-									value={selectedIngredient}
-									onChange={(e) => setSelectedIngredient(e.target.value)}
-								>
-									<option value="" disabled>
-										Select Ingredient
-									</option>
-									{allIngredients.map((ing) => (
-										<option key={ing.id} value={ing.id}>
-											{ing.name} ({ing.unit})
-										</option>
+									<div className="form-check mb-3">
+										<input
+											className="form-check-input"
+											type="checkbox"
+											checked={suitableForLunch}
+											onChange={(e) => setSuitableForLunch(e.target.checked)}
+											id={`lunchCheck${meal.id}`}
+										/>
+										<label
+											className="form-check-label"
+											htmlFor={`lunchCheck${meal.id}`}
+										>
+											Suitable for Lunch
+										</label>
+									</div>
 									))}
 								</select>
 								<input
@@ -228,6 +235,7 @@ const EditMeal: React.FC<EditMealProps> = ({ meal }) => {
 								onClick={() => {
 									setName(meal.name);
 									setSuitableForWeekend(meal.suitable_for_weekend === 1);
+									setSuitableForLunch(meal.suitable_for_lunch === 1);
 								}}
 							>
 								Close

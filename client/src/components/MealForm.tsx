@@ -12,6 +12,7 @@ interface Meal {
 	id: number;
 	name: string;
 	suitable_for_weekend: number | boolean;
+	suitable_for_lunch?: number | boolean;
 	representative_image?: string | null;
 	meal_images?: MealImage[];
 	total_calories?: number | null;
@@ -49,6 +50,12 @@ const MealForm: React.FC<MealFormProps> = ({
 		initialMeal
 			? initialMeal.suitable_for_weekend === 1 ||
 					initialMeal.suitable_for_weekend === true
+			: false,
+	);
+	const [suitableForLunch, setSuitableForLunch] = useState(
+		initialMeal
+			? initialMeal.suitable_for_lunch === 1 ||
+					initialMeal.suitable_for_lunch === true
 			: false,
 	);
 	const [newImages, setNewImages] = useState<File[]>([]);
@@ -180,6 +187,7 @@ const MealForm: React.FC<MealFormProps> = ({
 			const formData = new FormData();
 			formData.append("name", name);
 			formData.append("suitable_for_weekend", String(suitableForWeekend));
+			formData.append("suitable_for_lunch", String(suitableForLunch));
 			for (const img of newImages) {
 				formData.append("images", img);
 			}
@@ -280,12 +288,14 @@ const MealForm: React.FC<MealFormProps> = ({
 		if (!initialMeal) {
 			setName("");
 			setSuitableForWeekend(false);
+			setSuitableForLunch(false);
 			setMealIngredients([]);
 			setExistingImages([]);
 			setRepresentativeImage(null);
 		} else {
 			setName(initialMeal.name);
 			setSuitableForWeekend(initialMeal.suitable_for_weekend === 1);
+			setSuitableForLunch(initialMeal.suitable_for_lunch === 1);
 			setExistingImages(initialMeal.meal_images ?? []);
 			setRepresentativeImage(initialMeal.representative_image ?? null);
 			getMealIngredients();
@@ -422,6 +432,23 @@ const MealForm: React.FC<MealFormProps> = ({
 									htmlFor={`weekendCheck-${modalId}`}
 								>
 									Suitable for Weekends
+								</label>
+							</div>
+
+						<div className="form-check mb-3 text-start">
+								<input
+									className="form-check-input"
+									type="checkbox"
+									id={`lunchCheck-${modalId}`}
+									checked={suitableForLunch}
+									disabled={readOnly}
+									onChange={(e) => setSuitableForLunch(e.target.checked)}
+								/>
+								<label
+									className="form-check-label"
+									htmlFor={`lunchCheck-${modalId}`}
+								>
+									Suitable for Lunch
 								</label>
 							</div>
 

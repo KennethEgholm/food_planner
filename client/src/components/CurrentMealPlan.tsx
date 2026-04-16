@@ -7,6 +7,9 @@ interface MealPlanDay {
 	meal_id: number | null;
 	meal_name: string | null;
 	meal_image: string | null;
+	lunch_meal_id: number | null;
+	lunch_meal_name: string | null;
+	lunch_meal_image: string | null;
 }
 
 interface MealPlanSnack {
@@ -132,8 +135,31 @@ const CurrentMealPlan: React.FC = () => {
 									{day.meal_name ?? (
 <span className="text-secondary">No meal</span>
 									)}
+								</div>							{(day.day === "Saturday" || day.day === "Sunday") && (
+								<div className="mt-2 pt-2 border-top">
+									<div className="text-muted small mb-1">Lunch</div>
+									{day.lunch_meal_image ? (
+										<button
+											type="button"
+											className="p-0 border-0 w-100 mb-1"
+											style={{ background: "none" }}
+											onClick={() => setFullScreenImage(`/${day.lunch_meal_image}`)}
+										>
+											<img
+												src={`/${day.lunch_meal_image}`}
+												alt={day.lunch_meal_name ?? "Lunch"}
+												className="w-100 rounded"
+												style={{ height: "80px", objectFit: "cover" }}
+											/>
+										</button>
+									) : null}
+									<div className="fw-bold small">
+										{day.lunch_meal_name ?? (
+											<span className="text-secondary">No lunch</span>
+										)}
+									</div>
 								</div>
-							</div>
+							)}							</div>
 						</div>
 					</div>
 				))}

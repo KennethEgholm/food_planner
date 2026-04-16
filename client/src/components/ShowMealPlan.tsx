@@ -1,6 +1,6 @@
 import axios from "axios";
 import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface MealPlan {
@@ -13,6 +13,9 @@ interface MealPlanDay {
 	meal_id: number | null;
 	meal_name: string | null;
 	meal_image?: string | null;
+	lunch_meal_id?: number | null;
+	lunch_meal_name?: string | null;
+	lunch_meal_image?: string | null;
 }
 
 interface MealPlanSnack {
@@ -105,35 +108,68 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 									</thead>
 									<tbody>
 										{days.map((day, index) => (
-											<tr key={`${day.day}-${day.meal_id}-${index}`}>
-												<td>{day.day}</td>
-												<td>
-													<div className="d-flex align-items-center">
-														{day.meal_image && (
-															<img
-																src={`/${day.meal_image}`}
-																alt={day.meal_name || "Meal"}
-																style={{
-																	width: "40px",
-																	height: "40px",
-																	objectFit: "cover",
-																	marginRight: "10px",
-																	borderRadius: "4px",
-																	cursor: "pointer",
-																}}
-																onClick={() =>
-																	setFullScreenImage(`/${day.meal_image}`)
-																}
-															/>
-														)}
-														{day.meal_name ? (
-															day.meal_name
-														) : (
-															<span className="text-secondary">(No Meal)</span>
-														)}
-													</div>
-												</td>
-											</tr>
+											<Fragment key={`${day.day}-${index}`}>
+												<tr>
+													<td>{day.day}</td>
+													<td>
+														<div className="d-flex align-items-center">
+															{day.meal_image && (
+																<img
+																	src={`/${day.meal_image}`}
+																	alt={day.meal_name || "Meal"}
+																	style={{
+																		width: "40px",
+																		height: "40px",
+																		objectFit: "cover",
+																		marginRight: "10px",
+																		borderRadius: "4px",
+																		cursor: "pointer",
+																	}}
+																	onClick={() =>
+																		setFullScreenImage(`/${day.meal_image}`)
+																	}
+																/>
+															)}
+															{day.meal_name ? (
+																day.meal_name
+															) : (
+																<span className="text-secondary">(No Meal)</span>
+															)}
+														</div>
+													</td>
+												</tr>
+												{(day.day === "Saturday" || day.day === "Sunday") && (
+													<tr>
+														<td className="text-muted ps-3" style={{ fontSize: "0.9em" }}>Lunch</td>
+														<td>
+															<div className="d-flex align-items-center">
+																{day.lunch_meal_image && (
+																	<img
+																		src={`/${day.lunch_meal_image}`}
+																		alt={day.lunch_meal_name || "Lunch"}
+																		style={{
+																			width: "40px",
+																			height: "40px",
+																			objectFit: "cover",
+																			marginRight: "10px",
+																			borderRadius: "4px",
+																			cursor: "pointer",
+																		}}
+																		onClick={() =>
+																			setFullScreenImage(`/${day.lunch_meal_image}`)
+																		}
+																	/>
+																)}
+																{day.lunch_meal_name ? (
+																	day.lunch_meal_name
+																) : (
+																	<span className="text-secondary">(No Lunch)</span>
+																)}
+															</div>
+														</td>
+													</tr>
+												)}
+											</Fragment>
 										))}
 									</tbody>
 								</table>

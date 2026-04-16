@@ -4,8 +4,8 @@ Food Planner is a web application designed to help users plan their meals for th
 ## Features
 - **Meal Plan**: 
     - Users can create meal plans for each day of the week. Dinner only.
+    - Users can add meals to the weekend days that are marked as "Suitable for Lunch".
     - User can choos to have nothing selected for any given day.
-    - A meal can be marked "Suitable for weekends".
     - A meal plan can be generated "randomly".
     - Only meals marked "Suitable for weekends" will be selected for Saturday and Sunday when generating a meal plan randomly.
     - A meal plan can have zero or more snacks associated with it.
@@ -23,6 +23,8 @@ Food Planner is a web application designed to help users plan their meals for th
     - The calories per 100g will be autofilled by asking the configured AI model (e.g. OpenAI) when an ingredient is created or updated, but the user can override it if they want to.
 
 - **Meals**: 
+    - A meal can be marked "Suitable for weekends".
+    - A meal can be marked as "Suitable for Lunch".
     - Users can create meals and associate them with ingredients. A meal has a name and a list of ingredients with their respective quantities.
     - A meal can have zero to many images attached to it. The images are shown as thumbnails and when pressed the image is shown in full size.
     - Uploaded images must be stored as files in a folder on the server.

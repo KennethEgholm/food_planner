@@ -5,11 +5,12 @@ import { Fragment, useState } from "react";
 const InputMeal: React.FC = () => {
 	const [name, setName] = useState<string>("");
 	const [suitableForWeekend, setSuitableForWeekend] = useState<boolean>(false);
+	const [suitableForLunch, setSuitableForLunch] = useState<boolean>(false);
 
 	const onSubmit = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
-			const body = { name, suitable_for_weekend: suitableForWeekend };
+			const body = { name, suitable_for_weekend: suitableForWeekend, suitable_for_lunch: suitableForLunch };
 			await axios.post("/api/meals", body);
 			window.location.reload();
 		} catch (err: any) {
@@ -39,6 +40,7 @@ const InputMeal: React.FC = () => {
 				onClick={() => {
 					setName("");
 					setSuitableForWeekend(false);
+					setSuitableForLunch(false);
 				}}
 			>
 				<div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
@@ -52,6 +54,7 @@ const InputMeal: React.FC = () => {
 								onClick={() => {
 									setName("");
 									setSuitableForWeekend(false);
+									setSuitableForLunch(false);
 								}}
 							/>
 						</div>
@@ -85,8 +88,18 @@ const InputMeal: React.FC = () => {
 								<label className="form-check-label" htmlFor="weekendCheck">
 									Suitable for weekends
 								</label>
-							</div>
-						</div>
+							</div>								<div className="form-check mt-2">
+									<input
+										className="form-check-input"
+										type="checkbox"
+										id="lunchCheck"
+										checked={suitableForLunch}
+										onChange={(e) => setSuitableForLunch(e.target.checked)}
+									/>
+									<label className="form-check-label" htmlFor="lunchCheck">
+										Suitable for Lunch
+									</label>
+								</div>						</div>
 
 						<div className="modal-footer">
 							<button
@@ -105,6 +118,7 @@ const InputMeal: React.FC = () => {
 								onClick={() => {
 									setName("");
 									setSuitableForWeekend(false);
+									setSuitableForLunch(false);
 								}}
 							>
 								Close
