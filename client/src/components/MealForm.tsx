@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 interface MealImage {
 	id: number;
@@ -35,11 +36,13 @@ interface MealIngredient extends Ingredient {
 interface MealFormProps {
 	initialMeal?: Meal;
 	readOnly?: boolean;
+	noTrigger?: boolean;
 }
 
 const MealForm: React.FC<MealFormProps> = ({
 	initialMeal,
 	readOnly = false,
+	noTrigger = false,
 }) => {
 	// If we have an initial meal, we are in Edit/View Mode.
 	// Otherwise, we are in Create Mode (Draft Mode).
@@ -302,6 +305,30 @@ const MealForm: React.FC<MealFormProps> = ({
 		}
 	};
 
+	const modalRef = useRef<HTMLDivElement>(null);
+	const { id: urlId } = useParams<{ id: string }>();
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		if (!readOnly || !initialMeal) return;
+		const el = modalRef.current;
+		if (!el || !urlId || Number(urlId) !== initialMeal.id) return;
+
+		const bsWindow = window as any;
+		if (!bsWindow.bootstrap) return;
+
+		const modal = bsWindow.bootstrap.Modal.getOrCreateInstance(el);
+		modal.show();
+
+		const handleHide = () => {
+			navigate("/meals", { replace: true });
+		};
+		el.addEventListener("hidden.bs.modal", handleHide, { once: true });
+		return () => {
+			el.removeEventListener("hidden.bs.modal", handleHide);
+		};
+	}, [urlId, initialMeal, readOnly, navigate]);
+
 	const modalId = initialMeal
 		? readOnly
 			? `viewMealId${initialMeal.id}`
@@ -311,7 +338,7 @@ const MealForm: React.FC<MealFormProps> = ({
 
 	return (
 		<Fragment>
-			{readOnly ? (
+			{readOnly && !noTrigger ? (
 				<span
 					className="text-primary text-decoration-underline"
 					data-bs-toggle="modal"
@@ -320,7 +347,7 @@ const MealForm: React.FC<MealFormProps> = ({
 				>
 					{initialMeal?.name}
 				</span>
-			) : initialMeal ? (
+			) : !readOnly && initialMeal ? (
 				<button
 					type="button"
 					className="btn btn-warning"
@@ -373,7 +400,7 @@ const MealForm: React.FC<MealFormProps> = ({
 				</div>
 			)}
 
-			<div className="modal" id={modalId} tabIndex={-1}>
+			<div className="modal" id={modalId} tabIndex={-1} ref={readOnly ? modalRef : undefined}>
 				<div
 					className="modal-dialog modal-lg"
 					onClick={(e) => e.stopPropagation()}
@@ -393,7 +420,7 @@ const MealForm: React.FC<MealFormProps> = ({
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();
-									if (initialMeal) window.location.reload();
+									if (initialMeal && !readOnly) window.location.reload();
 								}}
 							/>
 						</div>
@@ -705,7 +732,7 @@ const MealForm: React.FC<MealFormProps> = ({
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();
-									if (initialMeal) window.location.reload();
+									if (initialMeal && !readOnly) window.location.reload();
 								}}
 							>
 								Close

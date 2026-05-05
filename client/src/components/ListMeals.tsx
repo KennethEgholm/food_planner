@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import MealForm from "./MealForm";
 
 interface MealImage {
@@ -23,7 +24,7 @@ interface Meal {
 	created_at?: string | null;
 }
 
-type SortField = "name" | "calories_per_100g" | "plan_count" | "created_at" | "suitable_for_lunch";
+type SortField = "name" | "calories_per_100g" | "plan_count" | "created_at";
 type SortDir = "asc" | "desc";
 
 const ListMeals: React.FC = () => {
@@ -31,6 +32,7 @@ const ListMeals: React.FC = () => {
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
 	const [sortField, setSortField] = useState<SortField>("name");
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
+	const navigate = useNavigate();
 
 	const handleSort = (field: SortField) => {
 		if (sortField === field) {
@@ -51,8 +53,6 @@ const ListMeals: React.FC = () => {
 			cmp = aVal - bVal;
 		} else if (sortField === "plan_count") {
 			cmp = (a.plan_count ?? 0) - (b.plan_count ?? 0);
-		} else if (sortField === "suitable_for_lunch") {
-			cmp = Number(a.suitable_for_lunch) - Number(b.suitable_for_lunch);
 		} else {
 			const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
 			const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -95,12 +95,8 @@ const ListMeals: React.FC = () => {
 						>
 							Meal Name {sortField === "name" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
 						</th>
-						<th
-							className="text-center"
-							style={{ cursor: "pointer", userSelect: "none", width: "100px" }}
-							onClick={() => handleSort("suitable_for_lunch")}
-						>
-							Lunch {sortField === "suitable_for_lunch" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
+						<th className="text-center" style={{ width: "120px" }}>
+							Suitable for
 						</th>
 						<th
 							className="text-center"
@@ -163,16 +159,25 @@ const ListMeals: React.FC = () => {
 									</div>
 								)}
 							</td>
-							<td>
-								<MealForm initialMeal={meal} readOnly />{" "}
-								{Boolean(meal.suitable_for_weekend) && (
-									<span className="badge bg-success ms-2">Weekend</span>
-								)}
+							<td className="text-start align-middle">
+								<span
+									className="text-primary text-decoration-underline"
+									style={{ cursor: "pointer" }}
+									onClick={() => navigate(`/meals/${meal.id}`)}
+								>
+									{meal.name}
+								</span>
+								<MealForm initialMeal={meal} readOnly noTrigger />
 							</td>
 							<td className="text-center align-middle">
-								{meal.suitable_for_lunch && (
-									<span className="badge bg-info">Lunch</span>
-								)}
+								<div className="d-flex flex-column gap-1 align-items-center">
+									{Boolean(meal.suitable_for_weekend) && (
+										<span className="badge bg-success">Weekend</span>
+									)}
+									{meal.suitable_for_lunch && (
+										<span className="badge bg-info">Lunch</span>
+									)}
+								</div>
 							</td>
 							<td className="text-center align-middle">
 								{meal.calorie_tier === "low" && (

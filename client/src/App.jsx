@@ -118,6 +118,26 @@ function App() {
 						}
 					/>
 					<Route
+						path="/meals/:id"
+						element={
+							<div className="tab-pane fade show active">
+								<h1 className="mt-5 mb-4">
+									Food Planner Meal List
+									{mealCount !== null && (
+										<span
+											className="badge bg-secondary ms-3 align-middle"
+											style={{ fontSize: "0.5em" }}
+										>
+											{mealCount}
+										</span>
+									)}
+								</h1>
+								<MealForm />
+								<ListMeals />
+							</div>
+						}
+					/>
+					<Route
 						path="/snacks"
 						element={
 							<div className="tab-pane fade show active">
