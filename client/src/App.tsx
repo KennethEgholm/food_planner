@@ -17,17 +17,18 @@ import Settings from "./components/Settings";
 import SnackForm from "./components/SnackForm";
 
 function App() {
-	const navLinkClass = ({ isActive }) => `nav-link ${isActive ? "active" : ""}`;
-	const [mealCount, setMealCount] = useState(null);
-	const [snackCount, setSnackCount] = useState(null);
+	const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+		`nav-link ${isActive ? "active" : ""}`;
+	const [mealCount, setMealCount] = useState<number | null>(null);
+	const [snackCount, setSnackCount] = useState<number | null>(null);
 
 	useEffect(() => {
 		axios
-			.get("/api/meals")
+			.get<unknown[]>("/api/meals")
 			.then((res) => setMealCount(res.data.length))
 			.catch(() => {});
 		axios
-			.get("/api/snacks")
+			.get<unknown[]>("/api/snacks")
 			.then((res) => setSnackCount(res.data.length))
 			.catch(() => {});
 	}, []);
