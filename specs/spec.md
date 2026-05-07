@@ -100,7 +100,6 @@ Canonical public URLs (after enabling Pages: repo → Settings → Pages → Sou
 
 | Field | URL |
 |---|---|
-| Application home page | `https://kennethegholm.github.io/food_planner/` |
 | Privacy policy link | `https://kennethegholm.github.io/food_planner/privacy` |
 | Terms of service link | `https://kennethegholm.github.io/food_planner/terms` |
 

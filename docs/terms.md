@@ -55,4 +55,4 @@ Questions about these terms: **kenneth.egholm@gmail.com**.
 
 ---
 
-See also: [Privacy Policy](privacy) · [Home](./)
+See also: [Privacy Policy](privacy).

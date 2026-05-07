@@ -87,4 +87,4 @@ This policy may be updated; the "Last updated" date above will reflect any chang
 
 ---
 
-See also: [Terms of Service](terms) · [Home](./)
+See also: [Terms of Service](terms).
