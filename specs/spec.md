@@ -89,6 +89,33 @@ Authentication is handled entirely by **Cloudflare Access** in front of the app,
 4. `req.user` is populated with `{ email, role }` for downstream route handlers.
 5. Write endpoints (POST, PUT, DELETE) additionally require the `requireAdmin` middleware, which returns `403` for non-admin users.
 
+### Google OAuth app
+The application uses a separate Google OAuth client (distinct from the Cloudflare Access SSO flow) to obtain per-user access to the Google Tasks API. Configuration lives in the Google Cloud Console under **APIs & Services → OAuth consent screen** and **→ Credentials**.
+
+**Consent screen requirements**
+
+The consent screen must have a publicly reachable "Application privacy policy link" and "Application terms of service link". Because the application itself is gated behind Cloudflare Access, those URLs cannot point at the app. Instead, the policies are published via GitHub Pages from the `docs/` folder of this public repository (source of truth: [`docs/privacy.md`](../docs/privacy.md), [`docs/terms.md`](../docs/terms.md)).
+
+Canonical public URLs (after enabling Pages: repo → Settings → Pages → Source: `main` / `/docs`):
+
+| Field | URL |
+|---|---|
+| Application home page | `https://kennethegholm.github.io/food_planner/` |
+| Privacy policy link | `https://kennethegholm.github.io/food_planner/privacy` |
+| Terms of service link | `https://kennethegholm.github.io/food_planner/terms` |
+
+**Publishing status**
+
+The OAuth consent screen must be set to **"In production"** (i.e. published, not "Testing"). While the consent screen is in Testing mode, Google issues refresh tokens that expire after 7 days, which causes `invalid_grant` errors in the Google Tasks export flow. Publishing the app is required even though the user list is restricted by Cloudflare Access.
+
+**Scopes requested**
+
+Only `https://www.googleapis.com/auth/tasks` — used solely to create a new task list and tasks in the signed-in user's Google Tasks when they explicitly trigger an export.
+
+**Token storage**
+
+Per-user OAuth tokens (access + refresh) are stored in the `user_google_tokens` table, keyed by user email. The `Disconnect Google` button in the shopping list modal calls `DELETE /api/auth/google/disconnect` and deletes the row.
+
 ### Database
 User records are stored in a `users` table:
 - `email` (primary key, from Cloudflare JWT)

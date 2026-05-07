@@ -4,7 +4,11 @@ import { prisma } from "../db";
 import { getUser, requireAdmin } from "../middleware/auth";
 import { generateAIMealPlan } from "../utils/aiMealPlan";
 import { appLog } from "../utils/appLog";
-import { getAuthenticatedClient } from "./auth";
+import {
+	clearGoogleTokens,
+	getAuthenticatedClient,
+	isGoogleAuthError,
+} from "./auth";
 
 const router = Router();
 
@@ -519,19 +523,18 @@ router.post(
 				taskListId: taskList.data.id,
 			});
 		} catch (err: unknown) {
+			const userEmail = getUser(req).email;
+			if (isGoogleAuthError(err)) {
+				await clearGoogleTokens(userEmail);
+				const msg = err instanceof Error ? err.message : "auth error";
+				appLog("error", "google-tasks", `Export auth failure (tokens cleared): ${msg}`);
+				return res
+					.status(401)
+					.json("Google authentication expired. Please reconnect.");
+			}
 			if (err instanceof Error) {
 				appLog("error", "google-tasks", `Export failed: ${err.message}`);
-				// Surface auth errors as 401 so the client knows to re-connect
-				const isAuthError = err.message.includes("invalid_grant") ||
-					err.message.includes("Invalid Credentials") ||
-					err.message.includes("Token has been expired") ||
-					err.message.includes("deleted_client") ||
-					err.message.includes("No Google tokens");
-				if (isAuthError) {
-					res.status(401).json("Google authentication expired. Please reconnect.");
-				} else {
-					res.status(500).send(`Export failed: ${err.message}`);
-				}
+				res.status(500).send(`Export failed: ${err.message}`);
 			} else {
 				appLog("error", "google-tasks", "Export failed: Unknown error");
 				res.status(500).send("Export failed: Unknown error");

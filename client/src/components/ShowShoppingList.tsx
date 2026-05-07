@@ -38,12 +38,12 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		try {
 			const res = await axios.get("/api/auth/google/status");
 			setIsConnected(res.data.connected);
-			if (!res.data.connected) {
-				const urlRes = await axios.get("/api/auth/google/url", {
-					params: { returnPath: `/plans/${mealPlan.id}` },
-				});
-				setAuthUrl(urlRes.data.url);
-			}
+			// Always pre-fetch the auth URL so the Connect button works immediately
+			// when the user needs to (re)authenticate.
+			const urlRes = await axios.get("/api/auth/google/url", {
+				params: { returnPath: `/plans/${mealPlan.id}` },
+			});
+			setAuthUrl(urlRes.data.url);
 		} catch (err: any) {
 			console.error(err.message);
 		}
@@ -56,16 +56,34 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		} catch (err: any) {
 			console.error(err.message);
 			if (err.response?.status === 401) {
-				// Tokens expired — force re-connect
+				// Tokens expired/revoked — server has cleared them. Force re-connect.
 				setIsConnected(false);
-				const urlRes = await axios.get("/api/auth/google/url", {
-					params: { returnPath: `/plans/${mealPlan.id}` },
-				}).catch(() => null);
-				if (urlRes) setAuthUrl(urlRes.data.url);
-				toast.error("Google connection expired. Please reconnect.");
+				try {
+					const urlRes = await axios.get("/api/auth/google/url", {
+						params: { returnPath: `/plans/${mealPlan.id}` },
+					});
+					setAuthUrl(urlRes.data.url);
+				} catch {
+					/* ignore */
+				}
+				toast.error("Google connection expired. Please reconnect below.");
 			} else {
-				toast.error("Failed to export.");
+				const serverMsg =
+					typeof err.response?.data === "string"
+						? err.response.data
+						: err.message;
+				toast.error(`Export failed: ${serverMsg}`);
 			}
+		}
+	};
+
+	const disconnectGoogle = async () => {
+		try {
+			await axios.delete("/api/auth/google/disconnect");
+			setIsConnected(false);
+			toast.success("Disconnected from Google.");
+		} catch {
+			toast.error("Failed to disconnect.");
 		}
 	};
 
@@ -129,13 +147,23 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 
 						<div className="modal-footer">
 							{isConnected ? (
-								<button
-									type="button"
-									className="btn btn-primary"
-									onClick={exportToGoogleTasks}
-								>
-									Export to Google Tasks
-								</button>
+								<>
+									<button
+										type="button"
+										className="btn btn-primary"
+										onClick={exportToGoogleTasks}
+									>
+										Export to Google Tasks
+									</button>
+									<button
+										type="button"
+										className="btn btn-outline-secondary"
+										onClick={disconnectGoogle}
+										title="Forget the stored Google credentials"
+									>
+										Disconnect Google
+									</button>
+								</>
 							) : (
 								<a
 									href={authUrl}

@@ -115,6 +115,38 @@ router.get("/status", async (req: Request, res: Response) => {
 	}
 });
 
+// --- Helper: detect Google "the refresh token is dead" errors ---
+export const isGoogleAuthError = (err: any): boolean => {
+	if (!err) return false;
+	const msg = String(err?.message ?? "");
+	const dataError = err?.response?.data?.error ?? err?.data?.error;
+	const status = err?.response?.status ?? err?.status ?? err?.code;
+	const indicators = [
+		"invalid_grant",
+		"invalid_token",
+		"Invalid Credentials",
+		"Token has been expired",
+		"unauthorized_client",
+		"deleted_client",
+		"No Google tokens",
+		"No refresh token",
+	];
+	if (indicators.some((s) => msg.includes(s))) return true;
+	if (typeof dataError === "string" && indicators.some((s) => dataError.includes(s)))
+		return true;
+	if (status === 401) return true;
+	return false;
+};
+
+// --- Helper: drop stored Google tokens for a user (e.g. after invalid_grant) ---
+export const clearGoogleTokens = async (userEmail: string) => {
+	try {
+		await prisma.user_google_tokens.delete({ where: { user_email: userEmail } });
+	} catch {
+		// nothing to clear
+	}
+};
+
 // --- Helper to get authenticated client for a specific user ---
 export const getAuthenticatedClient = async (userEmail: string) => {
 	const result = await prisma.user_google_tokens.findUnique({
@@ -128,13 +160,27 @@ export const getAuthenticatedClient = async (userEmail: string) => {
 	}
 
 	const tokens = JSON.parse(result.tokens);
+	if (!tokens.refresh_token) {
+		// Without a refresh token we cannot survive access-token expiry.
+		// Force a fresh consent flow.
+		await clearGoogleTokens(userEmail);
+		throw new Error(
+			`No refresh token stored for user: ${userEmail}. Please reconnect.`,
+		);
+	}
+
 	const oauth2Client = getOAuthClient();
 	oauth2Client.setCredentials(tokens);
 
-	// When the library auto-refreshes the access token, save the new tokens to DB
+	// When the library auto-refreshes the access token, save the new tokens to DB.
+	// Google does NOT return a new refresh_token on refresh, so preserve the original.
 	oauth2Client.on("tokens", async (newTokens) => {
 		try {
-			const merged = { ...tokens, ...newTokens };
+			const merged = {
+				...tokens,
+				...newTokens,
+				refresh_token: newTokens.refresh_token || tokens.refresh_token,
+			};
 			await prisma.user_google_tokens.update({
 				where: { user_email: userEmail },
 				data: { tokens: JSON.stringify(merged) },
@@ -146,5 +192,16 @@ export const getAuthenticatedClient = async (userEmail: string) => {
 
 	return oauth2Client;
 };
+
+// 4. Disconnect — let the user clear stored tokens explicitly
+router.delete("/disconnect", async (req: Request, res: Response) => {
+	try {
+		await clearGoogleTokens(getUser(req).email);
+		res.json({ disconnected: true });
+	} catch (err: any) {
+		appLog("error", "google-oauth", `Disconnect failed: ${err.message ?? err}`);
+		res.status(500).send("Server Error");
+	}
+});
 
 export default router;
