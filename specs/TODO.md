@@ -10,3 +10,4 @@
 
 ### Issues
 Check Containers for warnings / dependency errors ..
+When I add a new ingredient to the list, the energy density measure is not updated. I need to browse away or manually refresh the page.
