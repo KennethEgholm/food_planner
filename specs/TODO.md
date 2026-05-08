@@ -6,7 +6,6 @@
 - Have an AI read through online offers and suggest meals based on the ingredients on sale.
 - Search through online offers to find the best shopping strategy given a meal plan.
 - Align the views so they look more consistent and professional.
-- Whenever a modal is opened, a press on [ESC] will close it.
 
 ### Issues
 Check Containers for warnings / dependency errors ..

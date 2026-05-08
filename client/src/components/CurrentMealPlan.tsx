@@ -47,6 +47,16 @@ const CurrentMealPlan: React.FC = () => {
 		fetchPlan();
 	}, [fetchPlan]);
 
+	useEffect(() => {
+		if (!fullScreenImage) return;
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setFullScreenImage(null);
+		};
+		window.addEventListener("keydown", handleKey, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKey, { capture: true });
+	}, [fullScreenImage]);
+
 	// Auto-generate images for meals that have none
 	useEffect(() => {
 		if (!plan) return;

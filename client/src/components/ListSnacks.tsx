@@ -42,6 +42,16 @@ const ListSnacks: React.FC = () => {
 	};
 
 	useEffect(() => {
+		if (!fullScreenImage) return;
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setFullScreenImage(null);
+		};
+		window.addEventListener("keydown", handleKey, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKey, { capture: true });
+	}, [fullScreenImage]);
+
+	useEffect(() => {
 		getSnacks();
 	}, [getSnacks]);
 

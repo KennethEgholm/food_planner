@@ -83,6 +83,16 @@ const ListMeals: React.FC = () => {
 		getMeals();
 	}, [getMeals]);
 
+	useEffect(() => {
+		if (!fullScreenImage) return;
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setFullScreenImage(null);
+		};
+		window.addEventListener("keydown", handleKey, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKey, { capture: true });
+	}, [fullScreenImage]);
+
 	return (
 		<Fragment>
 			<table className="table mt-5">
