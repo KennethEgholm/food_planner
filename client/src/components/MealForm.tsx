@@ -338,16 +338,18 @@ const MealForm: React.FC<MealFormProps> = ({
 
 	return (
 		<Fragment>
-			{readOnly && !noTrigger ? (
-				<span
-					className="text-primary text-decoration-underline"
-					data-bs-toggle="modal"
-					data-bs-target={targetId}
-					style={{ cursor: "pointer" }}
-				>
-					{initialMeal?.name}
-				</span>
-			) : !readOnly && initialMeal ? (
+			{readOnly ? (
+				noTrigger ? null : (
+					<span
+						className="text-primary text-decoration-underline"
+						data-bs-toggle="modal"
+						data-bs-target={targetId}
+						style={{ cursor: "pointer" }}
+					>
+						{initialMeal?.name}
+					</span>
+				)
+			) : initialMeal ? (
 				<button
 					type="button"
 					className="btn btn-warning"
