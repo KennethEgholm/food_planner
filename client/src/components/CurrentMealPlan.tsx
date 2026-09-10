@@ -1,6 +1,6 @@
 import axios from "axios";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface MealPlanDay {
 	day: string;
@@ -31,6 +31,12 @@ const CurrentMealPlan: React.FC = () => {
 	const [loading, setLoading] = useState(true);
 	const [generating, setGenerating] = useState<Record<string, boolean>>({});
 	const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
+	const attemptedRef = useRef<Set<number>>(new Set());
+	const planIdRef = useRef<number | null>(null);
+
+	const todayName = new Date().toLocaleDateString("en-US", {
+		weekday: "long",
+	});
 
 	const fetchPlan = useCallback(async () => {
 		try {
@@ -57,13 +63,25 @@ const CurrentMealPlan: React.FC = () => {
 			window.removeEventListener("keydown", handleKey, { capture: true });
 	}, [fullScreenImage]);
 
-	// Auto-generate images for meals that have none
+	// Auto-generate images for meals that have none. Each meal is only attempted
+	// once per plan load so a failing generator cannot loop forever.
 	useEffect(() => {
 		if (!plan) return;
+		if (planIdRef.current !== plan.id) {
+			planIdRef.current = plan.id;
+			attemptedRef.current = new Set();
+		}
 		const missing = plan.days.filter(
-(d) => d.meal_id !== null && d.meal_image === null,
+			(d) =>
+				d.meal_id !== null &&
+				d.meal_image === null &&
+				!attemptedRef.current.has(d.meal_id),
 		);
 		if (missing.length === 0) return;
+
+		for (const day of missing) {
+			if (day.meal_id) attemptedRef.current.add(day.meal_id);
+		}
 
 		const generate = async () => {
 			for (const day of missing) {
@@ -72,7 +90,7 @@ const CurrentMealPlan: React.FC = () => {
 				try {
 					await axios.post(`/api/meals/${day.meal_id}/generate-image`);
 				} catch {
-					// non-admin or generation failed — silently skip
+					// non-admin or generation failed — don't retry this session
 				}
 				setGenerating((prev) => ({ ...prev, [day.day]: false }));
 			}
@@ -84,160 +102,165 @@ const CurrentMealPlan: React.FC = () => {
 
 	if (loading) {
 		return (
-<div className="text-center mt-5">
-				<output className="spinner-border text-success" />
+			<div className="loading-state">
+				<output className="spinner-border" />
+				<span>Loading your plan…</span>
 			</div>
 		);
 	}
 
 	if (!plan) {
 		return (
-<div className="text-center mt-5 text-muted">
-				<p>No current meal plan set.</p>
+			<div className="empty-state">
+				<i className="bi bi-calendar-heart" aria-hidden="true" />
+				<h3>No current meal plan</h3>
 				<p>
-					Go to <strong>Meal Plans</strong> and click{" "}
-					<strong>Set as Current</strong> on a plan.
+					Go to <strong>Meal Plans</strong> and click <strong>Set as Current</strong>{" "}
+					on a plan.
 				</p>
 			</div>
 		);
 	}
 
 	return (
-<>
-			<h2 className="mt-4 mb-3 text-center">{plan.name}</h2>
+		<>
+			<div className="page-header">
+				<div>
+					<p className="page-subtitle mb-1">Current plan</p>
+					<h1 className="page-title">{plan.name}</h1>
+				</div>
+				<span className="chip chip-current">
+					<i className="bi bi-check-circle" aria-hidden="true" /> Active
+				</span>
+			</div>
 
-			<div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
-				{plan.days.map((day) => (
-<div className="col" key={day.day}>
-						<div className="card h-100 shadow-sm">
-							{generating[day.day] ? (
-<div
-									className="card-img-top d-flex align-items-center justify-content-center bg-light"
-									style={{ height: "180px" }}
-								>
-									<output className="spinner-border text-secondary" />
-								</div>
-							) : day.meal_image ? (
-<button
-									type="button"
-									className="p-0 border-0 w-100"
-									style={{ background: "none" }}
-									onClick={() => setFullScreenImage(`/${day.meal_image}`)}
-								>
-									<img
-										src={`/${day.meal_image}`}
-										alt={day.meal_name ?? day.day}
-										className="card-img-top"
-										style={{ height: "180px", objectFit: "cover" }}
-									/>
-								</button>
-							) : (
-<div
-									className="card-img-top d-flex align-items-center justify-content-center bg-light text-muted"
-									style={{ height: "180px" }}
-								>
-									<span style={{ fontSize: "2rem" }}>🍽️</span>
-								</div>
-							)}
-							<div className="card-body p-2 text-center">
-								<div className="fw-semibold text-muted small">{day.day}</div>
-								<div className="fw-bold">
-									{day.meal_name ?? (
-<span className="text-secondary">No meal</span>
-									)}
-								</div>							{(day.day === "Saturday" || day.day === "Sunday") && (
-								<div className="mt-2 pt-2 border-top">
-									<div className="text-muted small mb-1">Lunch</div>
-									{day.lunch_meal_image ? (
-										<button
-											type="button"
-											className="p-0 border-0 w-100 mb-1"
-											style={{ background: "none" }}
-											onClick={() => setFullScreenImage(`/${day.lunch_meal_image}`)}
-										>
-											<img
-												src={`/${day.lunch_meal_image}`}
-												alt={day.lunch_meal_name ?? "Lunch"}
-												className="w-100 rounded"
-												style={{ height: "80px", objectFit: "cover" }}
-											/>
-										</button>
-									) : null}
-									<div className="fw-bold small">
-										{day.lunch_meal_name ?? (
-											<span className="text-secondary">No lunch</span>
-										)}
+			<div className="week-grid mb-4">
+				{plan.days.map((day) => {
+					const isWeekend = day.day === "Saturday" || day.day === "Sunday";
+					const isToday = day.day === todayName;
+					return (
+						<div
+							className={`day-card ${isWeekend ? "is-weekend" : ""} ${
+								isToday ? "is-today" : ""
+							}`}
+							key={day.day}
+						>
+							<div className="day-card-head">
+								<span>{day.day}</span>
+								{isToday && <span>Today</span>}
+							</div>
+							<div className="day-card-media">
+								{generating[day.day] ? (
+									<div className="media-placeholder">
+										<output className="spinner-border spinner-border-sm" />
 									</div>
+								) : day.meal_image ? (
+									<button
+										type="button"
+										className="media-button"
+										aria-label={`View ${day.meal_name ?? day.day} larger`}
+										onClick={() => setFullScreenImage(`/${day.meal_image}`)}
+									>
+										<img
+											src={`/${day.meal_image}`}
+											alt={day.meal_name ?? day.day}
+											loading="lazy"
+										/>
+									</button>
+								) : (
+									<div className="media-placeholder">
+										<i className="bi bi-egg-fried" aria-hidden="true" />
+									</div>
+								)}
+							</div>
+							<div className="day-card-body">
+								<div className="day-card-meal">
+									{day.meal_name ?? (
+										<span className="text-muted-soft">No meal</span>
+									)}
 								</div>
-							)}							</div>
+								{isWeekend && (
+									<div className="day-card-lunch">
+										<span className="day-card-lunch-label">Lunch</span>
+										{day.lunch_meal_image && (
+											<button
+												type="button"
+												className="media-button"
+												aria-label={`View ${day.lunch_meal_name ?? "lunch"} larger`}
+												onClick={() =>
+													setFullScreenImage(`/${day.lunch_meal_image}`)
+												}
+											>
+												<img
+													src={`/${day.lunch_meal_image}`}
+													alt={day.lunch_meal_name ?? "Lunch"}
+													style={{
+														width: "100%",
+														height: "70px",
+														objectFit: "cover",
+														borderRadius: "var(--bs-border-radius-sm)",
+													}}
+													loading="lazy"
+												/>
+											</button>
+										)}
+										<span>
+											{day.lunch_meal_name ?? (
+												<span className="text-muted-soft">No lunch</span>
+											)}
+										</span>
+									</div>
+								)}
+							</div>
 						</div>
-					</div>
-				))}
+					);
+				})}
 			</div>
 
 			{plan.snacks.length > 0 && (
-				<>
-					<h5 className="text-center text-muted mb-3">Snacks</h5>
-					<div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-6 g-3 mb-4 justify-content-center">
-						{plan.snacks.map((snack) => (
-							<div className="col" key={snack.link_id}>
-								<div className="card h-100 shadow-sm">
-									{snack.snack_image ? (
-										<button
-											type="button"
-											className="p-0 border-0 w-100"
-											style={{ background: "none" }}
-											onClick={() => setFullScreenImage(`/${snack.snack_image}`)}
-										>
-											<img
-												src={`/${snack.snack_image}`}
-												alt={snack.name}
-												className="card-img-top"
-												style={{ height: "120px", objectFit: "cover" }}
-											/>
-										</button>
-									) : (
-										<div
-											className="card-img-top d-flex align-items-center justify-content-center bg-light text-muted"
-											style={{ height: "120px" }}
-										>
-											<span style={{ fontSize: "1.5rem" }}>🍎</span>
-										</div>
-									)}
-									<div className="card-body p-2 text-center">
-										<div className="fw-bold small">{snack.name}</div>
-									</div>
-								</div>
-							</div>
-						))}
+				<section>
+					<h5 className="mb-3">Snacks</h5>
+					<div className="d-flex flex-wrap gap-2">
+						{plan.snacks.map((snack) =>
+							snack.snack_image ? (
+								<button
+									type="button"
+									className="chip"
+									key={snack.link_id}
+									onClick={() => setFullScreenImage(`/${snack.snack_image}`)}
+								>
+									<img
+										src={`/${snack.snack_image}`}
+										alt=""
+										style={{
+											width: "24px",
+											height: "24px",
+											objectFit: "cover",
+											borderRadius: "50%",
+										}}
+										loading="lazy"
+									/>
+									{snack.name}
+								</button>
+							) : (
+								<span className="chip" key={snack.link_id}>
+									<i className="bi bi-cup-straw" aria-hidden="true" />
+									{snack.name}
+								</span>
+							),
+						)}
 					</div>
-				</>
+				</section>
 			)}
 
 			{fullScreenImage && (
 				<button
 					type="button"
-					style={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						width: "100%",
-						height: "100%",
-						backgroundColor: "rgba(0,0,0,0.85)",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 9999,
-						cursor: "pointer",
-						border: "none",
-					}}
+					className="lightbox"
 					onClick={() => setFullScreenImage(null)}
+					aria-label="Close image"
 				>
-					<img
-						src={fullScreenImage}
-						alt="Full screen"
-						style={{ maxHeight: "90%", maxWidth: "90%" }}
-					/>
+					<img src={fullScreenImage} alt="Full screen" />
 				</button>
 			)}
 		</>

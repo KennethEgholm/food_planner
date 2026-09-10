@@ -34,13 +34,10 @@ const ListMeals: React.FC = () => {
 	const [sortDir, setSortDir] = useState<SortDir>("asc");
 	const navigate = useNavigate();
 
-	const handleSort = (field: SortField) => {
-		if (sortField === field) {
-			setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-		} else {
-			setSortField(field);
-			setSortDir("asc");
-		}
+	const handleSortChange = (value: string) => {
+		const [field, dir] = value.split(":") as [SortField, SortDir];
+		setSortField(field);
+		setSortDir(dir);
 	};
 
 	const sortedMeals = [...meals].sort((a, b) => {
@@ -95,154 +92,148 @@ const ListMeals: React.FC = () => {
 
 	return (
 		<Fragment>
-			<table className="table mt-5">
-				<thead>
-					<tr>
-						<th className="text-center" style={{ width: "70px" }}>Image</th>
-						<th
-							style={{ cursor: "pointer", userSelect: "none" }}
-							onClick={() => handleSort("name")}
-						>
-							Meal Name {sortField === "name" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
-						</th>
-						<th className="text-center" style={{ width: "120px" }}>
-							Suitable for
-						</th>
-						<th
-							className="text-center"
-							style={{ cursor: "pointer", userSelect: "none", width: "140px" }}
-							onClick={() => handleSort("calories_per_100g")}
-						>
-							Kcal/100g {sortField === "calories_per_100g" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
-						</th>
-						<th
-							className="text-center"
-							style={{ cursor: "pointer", userSelect: "none", width: "90px" }}
-							onClick={() => handleSort("plan_count")}
-						>
-							Usage {sortField === "plan_count" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
-						</th>
-						<th
-							className="text-center"
-							style={{ cursor: "pointer", userSelect: "none", width: "110px" }}
-							onClick={() => handleSort("created_at")}
-						>
-							Created {sortField === "created_at" ? (sortDir === "asc" ? "▲" : "▼") : "⇅"}
-						</th>
-						<th className="text-end" style={{ width: "160px" }}>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{sortedMeals.map((meal) => (
-						<tr key={meal.id}>
-							<td className="text-center align-middle">
-								{(meal.representative_image ?? meal.meal_images?.[0]?.path) && (
-									<div
-										style={{ position: "relative", display: "inline-block" }}
-									>
-										<img
-											src={`/${meal.representative_image ?? meal.meal_images?.[0]?.path}`}
-											alt={meal.name}
-											style={{
-												width: "50px",
-												height: "50px",
-												objectFit: "cover",
-												cursor: "pointer",
-											}}
-											onClick={() =>
-												setFullScreenImage(`/${meal.representative_image ?? meal.meal_images?.[0]?.path}`)
-											}
-										/>
-										{(meal.meal_images?.length ?? 0) > 1 && (
-											<span
-												className="badge bg-secondary"
-												style={{
-													position: "absolute",
-													bottom: 0,
-													right: 0,
-													fontSize: "9px",
-												}}
+			<div className="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3">
+				<div className="d-flex align-items-center gap-2">
+					<label htmlFor="meal-sort" className="form-label mb-0 text-muted-soft">
+						Sort
+					</label>
+					<select
+						id="meal-sort"
+						className="form-select form-select-sm"
+						style={{ width: "auto" }}
+						value={`${sortField}:${sortDir}`}
+						onChange={(e) => handleSortChange(e.target.value)}
+					>
+						<option value="name:asc">Name A–Z</option>
+						<option value="name:desc">Name Z–A</option>
+						<option value="calories_per_100g:asc">Calories (low first)</option>
+						<option value="calories_per_100g:desc">Calories (high first)</option>
+						<option value="plan_count:desc">Most used</option>
+						<option value="plan_count:asc">Least used</option>
+						<option value="created_at:desc">Newest</option>
+						<option value="created_at:asc">Oldest</option>
+					</select>
+				</div>
+			</div>
+
+			{sortedMeals.length === 0 ? (
+				<div className="empty-state">
+					<i className="bi bi-egg-fried" aria-hidden="true" />
+					<h3>No meals yet</h3>
+					<p>Use the + button to add your first meal.</p>
+				</div>
+			) : (
+				<div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+					{sortedMeals.map((meal) => {
+						const image =
+							meal.representative_image ?? meal.meal_images?.[0]?.path ?? null;
+						const extraImages = (meal.meal_images?.length ?? 0) - 1;
+						const planCount = meal.plan_count ?? 0;
+
+						return (
+							<div className="col" key={meal.id}>
+								<article className="meal-card">
+									<div className="meal-card-media">
+										{image ? (
+											<button
+												type="button"
+												className="media-button"
+												aria-label={`View ${meal.name} larger`}
+												onClick={() => setFullScreenImage(`/${image}`)}
 											>
-												+{(meal.meal_images?.length ?? 0) - 1}
-											</span>
+												<img src={`/${image}`} alt={meal.name} loading="lazy" />
+											</button>
+										) : (
+											<div className="media-placeholder">
+												<i className="bi bi-egg-fried" aria-hidden="true" />
+											</div>
+										)}
+										{extraImages > 0 && (
+											<span className="media-count">+{extraImages}</span>
 										)}
 									</div>
-								)}
-							</td>
-							<td className="text-start align-middle">
-								<span
-									className="text-primary text-decoration-underline"
-									style={{ cursor: "pointer" }}
-									onClick={() => navigate(`/meals/${meal.id}`)}
-								>
-									{meal.name}
-								</span>
-								<MealForm initialMeal={meal} readOnly noTrigger />
-							</td>
-							<td className="text-center align-middle">
-								<div className="d-flex flex-column gap-1 align-items-center">
-									{Boolean(meal.suitable_for_weekend) && (
-										<span className="badge bg-success">Weekend</span>
-									)}
-									{meal.suitable_for_lunch && (
-										<span className="badge bg-info">Lunch</span>
-									)}
-								</div>
-							</td>
-							<td className="text-center align-middle">
-								{meal.calorie_tier === "low" && (
-									<span className="badge bg-success">{meal.calories_per_100g}</span>
-								)}
-								{meal.calorie_tier === "medium" && (
-									<span className="badge bg-warning text-dark">{meal.calories_per_100g}</span>
-								)}
-								{meal.calorie_tier === "high" && (
-									<span className="badge bg-danger">{meal.calories_per_100g}</span>
-								)}
-							</td>
-							<td className="text-center align-middle">
-								{(meal.plan_count ?? 0) > 0 && (
-									<span className="badge bg-secondary" title="Number of meal plans this meal appears in">{meal.plan_count}</span>
-								)}
-							</td>						<td className="text-center align-middle" style={{ fontSize: "0.8em", color: "#888" }}>
-							{meal.created_at ? new Date(meal.created_at).toLocaleDateString() : ""}
-						</td>							<td className="text-end align-middle">
-								<div className="d-flex justify-content-end gap-2">
-									<MealForm initialMeal={meal} />
-									<button
-										className="btn btn-danger"
-										onClick={() => deleteMeal(meal.id)}
-									>
-										Delete
-									</button>
-								</div>
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
-			{fullScreenImage && (
-				<div
-					style={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						width: "100%",
-						height: "100%",
-						backgroundColor: "rgba(0,0,0,0.8)",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 9999,
-					}}
-					onClick={() => setFullScreenImage(null)}
-				>
-					<img
-						src={fullScreenImage}
-						alt="Full Screen"
-						style={{ maxHeight: "90%", maxWidth: "90%" }}
-					/>
+
+									<div className="meal-card-body">
+										<h3 className="meal-card-title">
+											<button
+												type="button"
+												className="meal-card-title-link"
+												onClick={() => navigate(`/meals/${meal.id}`)}
+											>
+												{meal.name}
+											</button>
+										</h3>
+
+										<div className="d-flex flex-wrap gap-1">
+											{Boolean(meal.suitable_for_weekend) && (
+												<span className="chip chip-weekend">
+													<i className="bi bi-sun" aria-hidden="true" /> Weekend
+												</span>
+											)}
+											{meal.suitable_for_lunch && (
+												<span className="chip chip-lunch">
+													<i className="bi bi-brightness-high" aria-hidden="true" />{" "}
+													Lunch
+												</span>
+											)}
+											{meal.calorie_tier ? (
+												<span
+													className={`cal-badge ${meal.calorie_tier}`}
+													title="Calories per 100 g"
+												>
+													<i className="bi bi-fire" aria-hidden="true" />{" "}
+													{meal.calories_per_100g} kcal/100g
+												</span>
+											) : (
+												<span className="cal-badge muted">
+													<i className="bi bi-fire" aria-hidden="true" /> No calorie data
+												</span>
+											)}
+										</div>
+
+										<div className="meal-card-meta">
+											<span title="Number of meal plans this meal appears in">
+												<i className="bi bi-bar-chart" aria-hidden="true" />
+												{planCount} {planCount === 1 ? "plan" : "plans"}
+											</span>
+											{meal.created_at && (
+												<span>
+													<i className="bi bi-calendar3" aria-hidden="true" />
+													{new Date(meal.created_at).toLocaleDateString()}
+												</span>
+											)}
+										</div>
+
+										<div className="meal-card-actions">
+											<MealForm initialMeal={meal} />
+											<button
+												type="button"
+												className="btn btn-outline-danger"
+												onClick={() => deleteMeal(meal.id)}
+											>
+												Delete
+											</button>
+										</div>
+									</div>
+
+									{/* Handles deep links to /meals/:id */}
+									<MealForm initialMeal={meal} readOnly noTrigger />
+								</article>
+							</div>
+						);
+					})}
 				</div>
+			)}
+
+			{fullScreenImage && (
+				<button
+					type="button"
+					className="lightbox"
+					onClick={() => setFullScreenImage(null)}
+					aria-label="Close image"
+				>
+					<img src={fullScreenImage} alt="Full screen" />
+				</button>
 			)}
 		</Fragment>
 	);

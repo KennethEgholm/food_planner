@@ -352,54 +352,22 @@ const MealForm: React.FC<MealFormProps> = ({
 			) : initialMeal ? (
 				<button
 					type="button"
-					className="btn btn-warning"
+					className="btn btn-outline-secondary"
 					data-bs-toggle="modal"
 					data-bs-target={targetId}
 				>
 					Edit
 				</button>
 			) : (
-				<div
-					style={{
-						position: "fixed",
-						bottom: "24px",
-						left: 0,
-						right: 0,
-						zIndex: 1040,
-						pointerEvents: "none",
-					}}
+				<button
+					type="button"
+					className="fab"
+					data-bs-toggle="modal"
+					data-bs-target={targetId}
+					aria-label="Add Meal"
 				>
-					<div
-						className="container"
-						style={{ display: "flex", justifyContent: "flex-end" }}
-					>
-						<button
-							type="button"
-							data-bs-toggle="modal"
-							data-bs-target={targetId}
-							aria-label="Add Meal"
-							style={{
-								pointerEvents: "all",
-								width: "56px",
-								height: "56px",
-								borderRadius: "50%",
-								backgroundColor: "#1565c0",
-								color: "white",
-								fontSize: "28px",
-								lineHeight: "1",
-								border: "none",
-								cursor: "pointer",
-								boxShadow:
-									"0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15)",
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-							}}
-						>
-							+
-						</button>
-					</div>
-				</div>
+					<i className="bi bi-plus-lg" aria-hidden="true" />
+				</button>
 			)}
 
 			<div className="modal" id={modalId} tabIndex={-1} ref={readOnly ? modalRef : undefined}>
@@ -730,7 +698,7 @@ const MealForm: React.FC<MealFormProps> = ({
 							)}
 							<button
 								type="button"
-								className="btn btn-danger"
+								className="btn btn-secondary"
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();

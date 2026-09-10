@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { useEffect, useState } from "react";
+import { THEMES, useTheme } from "../theme";
 
 interface SettingField {
 	key: string;
@@ -27,6 +28,7 @@ const THRESHOLD_FIELDS: SettingField[] = [
 ];
 
 const Settings: React.FC = () => {
+	const { theme, setTheme } = useTheme();
 	const [values, setValues] = useState<Record<string, string>>({});
 	const [saving, setSaving] = useState<Record<string, boolean>>({});
 	const [saved, setSaved] = useState<Record<string, boolean>>({});
@@ -224,6 +226,39 @@ const Settings: React.FC = () => {
 					<button type="button" className="btn-close" onClick={() => setError(null)} />
 				</div>
 			)}
+
+			<h5 className="mb-1">Appearance</h5>
+			<p className="text-muted small mb-3">
+				Pick the look that suits your kitchen. This is saved in your browser.
+			</p>
+			<div className="row g-2 mb-4">
+				{THEMES.map((t) => (
+					<div className="col-12 col-sm-4" key={t.id}>
+						<button
+							type="button"
+							className={`theme-option ${theme === t.id ? "selected" : ""}`}
+							onClick={() => setTheme(t.id)}
+							aria-pressed={theme === t.id}
+						>
+							<span className={`theme-swatch theme-swatch-${t.id}`}>
+								<span />
+								<span />
+								<span />
+							</span>
+							<span className="theme-option-label">{t.label}</span>
+							<span className="theme-option-desc">{t.description}</span>
+							{theme === t.id && (
+								<i
+									className="bi bi-check-circle-fill theme-check"
+									aria-hidden="true"
+								/>
+							)}
+						</button>
+					</div>
+				))}
+			</div>
+
+			<hr className="my-4" />
 
 			<button
 				type="button"

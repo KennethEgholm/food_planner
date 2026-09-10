@@ -36,7 +36,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 		<Fragment>
 			<button
 				type="button"
-				className="btn btn-warning"
+				className="btn btn-outline-secondary"
 				data-bs-toggle="modal"
 				data-bs-target={`#id${ingredient.id}`}
 			>
@@ -71,11 +71,11 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 						</div>
 
 						<div className="modal-body">
-							<label htmlFor="name-input" className="form-label">
+							<label htmlFor={`name-input-${ingredient.id}`} className="form-label">
 								Name
 							</label>
 							<input
-								id="name-input"
+								id={`name-input-${ingredient.id}`}
 								type="text"
 								className="form-control mb-3"
 								value={name}
@@ -86,11 +86,11 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 									}
 								}}
 							/>
-							<label htmlFor="unit-input" className="form-label">
+							<label htmlFor={`unit-input-${ingredient.id}`} className="form-label">
 								Unit
 							</label>
 							<select
-								id="unit-input"
+								id={`unit-input-${ingredient.id}`}
 								className="form-select"
 								value={unit}
 								onChange={(e) => setUnit(e.target.value)}
@@ -126,7 +126,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 						<div className="modal-footer">
 							<button
 								type="button"
-								className="btn btn-warning"
+								className="btn btn-primary"
 								data-bs-dismiss="modal"
 								onClick={updateIngredient}
 							>
@@ -134,7 +134,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 							</button>
 							<button
 								type="button"
-								className="btn btn-danger"
+								className="btn btn-secondary"
 								data-bs-dismiss="modal"
 								onClick={() => {
 									setName(ingredient.name);

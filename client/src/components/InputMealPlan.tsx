@@ -64,61 +64,31 @@ const InputMealPlan: React.FC = () => {
 
 	return (
 		<Fragment>
-			<h1 className="mt-5">
-				Meal Plans
+			<div className="page-header">
+				<div>
+					<h1 className="page-title">Meal Plans</h1>
+					<p className="page-subtitle">
+						Build a week from scratch, randomise it, or let AI plan it.
+					</p>
+				</div>
 				{count !== null && (
-					<span
-						className="badge bg-secondary ms-3 align-middle"
-						style={{ fontSize: "0.5em" }}
-					>
-						{count}
+					<span className="chip">
+						<i className="bi bi-journal-text" aria-hidden="true" />
+						{count} {count === 1 ? "plan" : "plans"}
 					</span>
 				)}
-			</h1>
-
-			{/* FAB */}
-			<div
-				style={{
-					position: "fixed",
-					bottom: "24px",
-					left: 0,
-					right: 0,
-					zIndex: 1040,
-					pointerEvents: "none",
-				}}
-			>
-				<div
-					className="container"
-					style={{ display: "flex", justifyContent: "flex-end" }}
-				>
-					<button
-						type="button"
-						data-bs-toggle="modal"
-						data-bs-target="#addMealPlanModal"
-						aria-label="Add Meal Plan"
-						style={{
-							pointerEvents: "all",
-							width: "56px",
-							height: "56px",
-							borderRadius: "50%",
-							backgroundColor: "#1565c0",
-							color: "white",
-							fontSize: "28px",
-							lineHeight: "1",
-							border: "none",
-							cursor: "pointer",
-							boxShadow:
-								"0 4px 8px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.15)",
-							display: "flex",
-							alignItems: "center",
-							justifyContent: "center",
-						}}
-					>
-						+
-					</button>
-				</div>
 			</div>
 
+			{/* FAB */}
+			<button
+				type="button"
+				className="fab"
+				data-bs-toggle="modal"
+				data-bs-target="#addMealPlanModal"
+				aria-label="Add Meal Plan"
+			>
+				<i className="bi bi-plus-lg" aria-hidden="true" />
+			</button>
 			{/* Modal */}
 			<div
 				className="modal"
@@ -192,7 +162,7 @@ const InputMealPlan: React.FC = () => {
 							</button>
 							<button
 								type="button"
-								className="btn btn-danger"
+								className="btn btn-secondary"
 								data-bs-dismiss="modal"
 								disabled={aiLoading}
 								onClick={() => setName("")}

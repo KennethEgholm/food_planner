@@ -45,58 +45,57 @@ const ListMealPlans: React.FC = () => {
 		getPlans();
 	}, [getPlans]);
 
-	const sorted = [...plans].sort((a, b) => Number(b.is_current) - Number(a.is_current));
+	const sorted = [...plans].sort(
+		(a, b) => Number(b.is_current) - Number(a.is_current),
+	);
+
+	if (sorted.length === 0) {
+		return (
+			<div className="empty-state">
+				<i className="bi bi-journal-text" aria-hidden="true" />
+				<h3>No meal plans yet</h3>
+				<p>Use the + button to create one — or let AI plan your week.</p>
+			</div>
+		);
+	}
 
 	return (
-		<table className="table mt-5 text-center">
-			<thead>
-				<tr>
-					<th>Plan Name</th>
-					<th>Actions</th>
-				</tr>
-			</thead>
-			<tbody>
-				{sorted.map((plan) => (
-					<tr key={plan.id}>
-						<td>
+		<div className="row row-cols-1 row-cols-md-2 g-3">
+			{sorted.map((plan) => (
+				<div className="col" key={plan.id}>
+					<article className={`plan-card ${plan.is_current ? "is-current" : ""}`}>
+						<div className="plan-card-head">
 							<ShowMealPlan mealPlan={plan} />
-						</td>
-						<td>
-							<div className="d-flex justify-content-center gap-2">
-								<EditMealPlan mealPlan={plan} />
-								<ShowShoppingList mealPlan={plan} />
-								{plan.is_current ? (
-									<button
-										type="button"
-										className="btn btn-success btn-sm"
-										style={{ minWidth: "120px" }}
-										disabled
-									>
-										✓ Current
-									</button>
-								) : (
-									<button
-										type="button"
-										className="btn btn-outline-success btn-sm"
-										style={{ minWidth: "120px" }}
-										onClick={() => setCurrentPlan(plan.id)}
-									>
-										Set as Current
-									</button>
-								)}
+							{plan.is_current && (
+								<span className="chip chip-current">
+									<i className="bi bi-check-circle" aria-hidden="true" /> Current
+								</span>
+							)}
+						</div>
+						<div className="plan-card-actions">
+							{!plan.is_current && (
 								<button
 									type="button"
-									className="btn btn-danger"
-									onClick={() => deletePlan(plan.id)}
+									className="btn btn-outline-success"
+									onClick={() => setCurrentPlan(plan.id)}
 								>
-									Delete
+									<i className="bi bi-star" aria-hidden="true" /> Set as Current
 								</button>
-							</div>
-						</td>
-					</tr>
-				))}
-			</tbody>
-		</table>
+							)}
+							<EditMealPlan mealPlan={plan} />
+							<ShowShoppingList mealPlan={plan} />
+							<button
+								type="button"
+								className="btn btn-outline-danger"
+								onClick={() => deletePlan(plan.id)}
+							>
+								Delete
+							</button>
+						</div>
+					</article>
+				</div>
+			))}
+		</div>
 	);
 };
 

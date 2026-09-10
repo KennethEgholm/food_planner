@@ -57,100 +57,88 @@ const ListSnacks: React.FC = () => {
 
 	return (
 		<Fragment>
-			<table className="table mt-5 text-center">
-				<thead>
-					<tr>
-						<th>Image</th>
-						<th>Snack Name</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{snacks.map((snack) => (
-						<tr key={snack.id}>
-							<td>
-								{(snack.representative_image ?? snack.snack_images?.[0]?.path) && (
-									<div
-										style={{ position: "relative", display: "inline-block" }}
-									>
-										<img
-											src={`/${snack.representative_image ?? snack.snack_images?.[0]?.path}`}
-											alt={snack.name}
-											style={{
-												width: "50px",
-												height: "50px",
-												objectFit: "cover",
-												cursor: "pointer",
-											}}
-											onClick={() =>
-												setFullScreenImage(`/${snack.representative_image ?? snack.snack_images?.[0]?.path}`)
-											}
-										/>
-										{!snack.representative_image && snack.snack_images && snack.snack_images.length > 1 && (
-											<span
-												className="badge bg-secondary"
-												style={{
-													position: "absolute",
-													bottom: 0,
-													right: 0,
-													fontSize: "9px",
-												}}
+			{snacks.length === 0 ? (
+				<div className="empty-state">
+					<i className="bi bi-cup-straw" aria-hidden="true" />
+					<h3>No snacks yet</h3>
+					<p>Use the + button to add your first snack.</p>
+				</div>
+			) : (
+				<div className="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-4">
+					{snacks.map((snack) => {
+						const image =
+							snack.representative_image ?? snack.snack_images?.[0]?.path ?? null;
+						const extraImages = (snack.snack_images?.length ?? 0) - 1;
+
+						return (
+							<div className="col" key={snack.id}>
+								<article className="meal-card">
+									<div className="meal-card-media">
+										{image ? (
+											<button
+												type="button"
+												className="media-button"
+												aria-label={`View ${snack.name} larger`}
+												onClick={() => setFullScreenImage(`/${image}`)}
 											>
-												+{snack.snack_images.length - 1}
-											</span>
+												<img src={`/${image}`} alt={snack.name} loading="lazy" />
+											</button>
+										) : (
+											<div className="media-placeholder">
+												<i className="bi bi-cup-straw" aria-hidden="true" />
+											</div>
+										)}
+										{extraImages > 0 && (
+											<span className="media-count">+{extraImages}</span>
 										)}
 									</div>
-								)}
-							</td>
-							<td>
-								<SnackForm initialSnack={snack} readOnly />
-								{snack.calorie_tier === "low" && (
-									<span className="badge bg-success ms-2">{snack.calories_per_100g} kcal/100g</span>
-								)}
-								{snack.calorie_tier === "medium" && (
-									<span className="badge bg-warning text-dark ms-2">{snack.calories_per_100g} kcal/100g</span>
-								)}
-								{snack.calorie_tier === "high" && (
-									<span className="badge bg-danger ms-2">{snack.calories_per_100g} kcal/100g</span>
-								)}
-							</td>
-							<td>
-								<div className="d-flex justify-content-center gap-2">
-									<SnackForm initialSnack={snack} />
-									<button
-										className="btn btn-danger"
-										onClick={() => deleteSnack(snack.id)}
-									>
-										Delete
-									</button>
-								</div>
-							</td>
-						</tr>
-					))}
-				</tbody>
-			</table>
-			{fullScreenImage && (
-				<div
-					style={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						width: "100%",
-						height: "100%",
-						backgroundColor: "rgba(0,0,0,0.8)",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 9999,
-					}}
-					onClick={() => setFullScreenImage(null)}
-				>
-					<img
-						src={fullScreenImage}
-						alt="Full Screen"
-						style={{ maxHeight: "90%", maxWidth: "90%" }}
-					/>
+
+									<div className="meal-card-body">
+										<h3 className="meal-card-title">
+											<SnackForm initialSnack={snack} readOnly />
+										</h3>
+
+										{snack.calorie_tier ? (
+											<span
+												className={`cal-badge ${snack.calorie_tier}`}
+												title="Calories per 100 g"
+											>
+												<i className="bi bi-fire" aria-hidden="true" />{" "}
+												{snack.calories_per_100g} kcal/100g
+											</span>
+										) : (
+											<span className="cal-badge muted">
+												<i className="bi bi-fire" aria-hidden="true" /> No calorie data
+											</span>
+										)}
+
+										<div className="meal-card-actions">
+											<SnackForm initialSnack={snack} />
+											<button
+												type="button"
+												className="btn btn-outline-danger"
+												onClick={() => deleteSnack(snack.id)}
+											>
+												Delete
+											</button>
+										</div>
+									</div>
+								</article>
+							</div>
+						);
+					})}
 				</div>
+			)}
+
+			{fullScreenImage && (
+				<button
+					type="button"
+					className="lightbox"
+					onClick={() => setFullScreenImage(null)}
+					aria-label="Close image"
+				>
+					<img src={fullScreenImage} alt="Full screen" />
+				</button>
 			)}
 		</Fragment>
 	);

@@ -1,6 +1,6 @@
 import axios from "axios";
 import type React from "react";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 interface MealPlan {
@@ -36,6 +36,10 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 	const { id: urlId } = useParams<{ id: string }>();
 	const navigate = useNavigate();
 
+	const todayName = new Date().toLocaleDateString("en-US", {
+		weekday: "long",
+	});
+
 	const getMealPlanDetails = useCallback(async () => {
 		try {
 			const res = await axios.get(`/api/meal-plans/${mealPlan.id}`);
@@ -67,6 +71,16 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 		};
 	}, [urlId, mealPlan.id, getMealPlanDetails, navigate]);
 
+	useEffect(() => {
+		if (!fullScreenImage) return;
+		const handleKey = (e: KeyboardEvent) => {
+			if (e.key === "Escape") setFullScreenImage(null);
+		};
+		window.addEventListener("keydown", handleKey, { capture: true });
+		return () =>
+			window.removeEventListener("keydown", handleKey, { capture: true });
+	}, [fullScreenImage]);
+
 	return (
 		<>
 			<button
@@ -97,95 +111,113 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 
 						<div className="modal-body">
 							{days.length === 0 ? (
-								<p className="text-center">No meals planned yet.</p>
+								<div className="empty-state py-4">
+									<i className="bi bi-calendar-x" aria-hidden="true" />
+									<p>No meals planned yet.</p>
+								</div>
 							) : (
-								<table className="table table-striped">
-									<thead>
-										<tr>
-											<th>Day</th>
-											<th>Meal</th>
-										</tr>
-									</thead>
-									<tbody>
-										{days.map((day, index) => (
-											<Fragment key={`${day.day}-${index}`}>
-												<tr>
-													<td>{day.day}</td>
-													<td>
-														<div className="d-flex align-items-center">
-															{day.meal_image && (
-																<img
-																	src={`/${day.meal_image}`}
-																	alt={day.meal_name || "Meal"}
-																	style={{
-																		width: "40px",
-																		height: "40px",
-																		objectFit: "cover",
-																		marginRight: "10px",
-																		borderRadius: "4px",
-																		cursor: "pointer",
-																	}}
-																	onClick={() =>
-																		setFullScreenImage(`/${day.meal_image}`)
-																	}
-																/>
-															)}
-															{day.meal_name ? (
-																day.meal_name
-															) : (
-																<span className="text-secondary">(No Meal)</span>
-															)}
+								<div className="week-grid">
+									{days.map((day, index) => {
+										const isWeekend =
+											day.day === "Saturday" || day.day === "Sunday";
+										const isToday = day.day === todayName;
+										return (
+											<div
+												className={`day-card ${isWeekend ? "is-weekend" : ""} ${
+													isToday ? "is-today" : ""
+												}`}
+												key={`${day.day}-${index}`}
+											>
+												<div className="day-card-head">
+													<span>{day.day}</span>
+													{isToday && <span>Today</span>}
+												</div>
+												<div className="day-card-media">
+													{day.meal_image ? (
+														<button
+															type="button"
+															className="media-button"
+															aria-label={`View ${day.meal_name ?? day.day} larger`}
+															onClick={() =>
+																setFullScreenImage(`/${day.meal_image}`)
+															}
+														>
+															<img
+																src={`/${day.meal_image}`}
+																alt={day.meal_name ?? day.day}
+																loading="lazy"
+															/>
+														</button>
+													) : (
+														<div className="media-placeholder">
+															<i className="bi bi-egg-fried" aria-hidden="true" />
 														</div>
-													</td>
-												</tr>
-												{(day.day === "Saturday" || day.day === "Sunday") && (
-													<tr>
-														<td className="text-muted ps-3" style={{ fontSize: "0.9em" }}>Lunch</td>
-														<td>
-															<div className="d-flex align-items-center">
-																{day.lunch_meal_image && (
+													)}
+												</div>
+												<div className="day-card-body">
+													<div className="day-card-meal">
+														{day.meal_name ?? (
+															<span className="text-muted-soft">No meal</span>
+														)}
+													</div>
+													{isWeekend && (
+														<div className="day-card-lunch">
+															<span className="day-card-lunch-label">Lunch</span>
+															{day.lunch_meal_image && (
+																<button
+																	type="button"
+																	className="media-button"
+																	aria-label={`View ${
+																		day.lunch_meal_name ?? "lunch"
+																	} larger`}
+																	onClick={() =>
+																		setFullScreenImage(
+																			`/${day.lunch_meal_image}`,
+																		)
+																	}
+																>
 																	<img
 																		src={`/${day.lunch_meal_image}`}
-																		alt={day.lunch_meal_name || "Lunch"}
+																		alt={day.lunch_meal_name ?? "Lunch"}
 																		style={{
-																			width: "40px",
-																			height: "40px",
+																			width: "100%",
+																			height: "70px",
 																			objectFit: "cover",
-																			marginRight: "10px",
-																			borderRadius: "4px",
-																			cursor: "pointer",
+																			borderRadius:
+																				"var(--bs-border-radius-sm)",
 																		}}
-																		onClick={() =>
-																			setFullScreenImage(`/${day.lunch_meal_image}`)
-																		}
+																		loading="lazy"
 																	/>
+																</button>
+															)}
+															<span>
+																{day.lunch_meal_name ?? (
+																	<span className="text-muted-soft">
+																		No lunch
+																	</span>
 																)}
-																{day.lunch_meal_name ? (
-																	day.lunch_meal_name
-																) : (
-																	<span className="text-secondary">(No Lunch)</span>
-																)}
-															</div>
-														</td>
-													</tr>
-												)}
-											</Fragment>
-										))}
-									</tbody>
-								</table>
+															</span>
+														</div>
+													)}
+												</div>
+											</div>
+										);
+									})}
+								</div>
 							)}
 
 							{snacks.length > 0 && (
-								<>
-									<h5 className="mt-4">Snacks</h5>
-									<ul className="list-group">
+								<div className="mt-4">
+									<h5>Snacks</h5>
+									<div className="d-flex flex-wrap gap-2">
 										{snacks.map((snack) => (
-											<li key={snack.link_id} className="list-group-item">
+											<span className="chip" key={snack.link_id}>
+												<i className="bi bi-cup-straw" aria-hidden="true" />
 												{snack.name}
-											</li>
+											</span>
 										))}
-									</ul>
-								</>
+									</div>
+								</div>
 							)}
 						</div>
 
@@ -201,28 +233,16 @@ const ShowMealPlan: React.FC<ShowMealPlanProps> = ({ mealPlan }) => {
 					</div>
 				</div>
 			</div>
+
 			{fullScreenImage && (
-				<div
-					style={{
-						position: "fixed",
-						top: 0,
-						left: 0,
-						width: "100%",
-						height: "100%",
-						backgroundColor: "rgba(0,0,0,0.8)",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 9999,
-					}}
+				<button
+					type="button"
+					className="lightbox"
 					onClick={() => setFullScreenImage(null)}
+					aria-label="Close image"
 				>
-					<img
-						src={fullScreenImage}
-						alt="Full Screen"
-						style={{ maxHeight: "90%", maxWidth: "90%" }}
-					/>
-				</div>
+					<img src={fullScreenImage} alt="Full screen" />
+				</button>
 			)}
 		</>
 	);

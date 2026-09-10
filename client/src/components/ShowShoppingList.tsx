@@ -83,7 +83,7 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		<Fragment>
 			<button
 				type="button"
-				className="btn btn-info"
+				className="btn btn-outline-primary"
 				data-bs-toggle="modal"
 				data-bs-target={`#shoppingList${mealPlan.id}`}
 				onClick={() => {
@@ -112,28 +112,25 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 
 						<div className="modal-body">
 							{list.length === 0 ? (
-								<p className="text-center">
-									No ingredients found for this plan.
-								</p>
+								<div className="empty-state py-4">
+									<i className="bi bi-basket" aria-hidden="true" />
+									<p>No ingredients found for this plan.</p>
+								</div>
 							) : (
-								<table className="table table-striped">
-									<thead>
-										<tr>
-											<th>Ingredient</th>
-											<th>Quantity</th>
-											<th>Unit</th>
-										</tr>
-									</thead>
-									<tbody>
-										{list.map((item, index) => (
-											<tr key={`${item.name}-${index}`}>
-												<td>{item.name}</td>
-												<td>{item.total_quantity}</td>
-												<td>{item.unit || "-"}</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
+								<ul className="shopping-list list-unstyled mb-0">
+									{list.map((item, index) => (
+										<li className="shopping-item" key={`${item.name}-${index}`}>
+											<span className="shopping-item-name">
+												<i className="bi bi-basket2" aria-hidden="true" />
+												{item.name}
+											</span>
+											<span className="shopping-item-qty">
+												{item.total_quantity}
+												{item.unit && <span className="unit">{item.unit}</span>}
+											</span>
+										</li>
+									))}
+								</ul>
 							)}
 						</div>
 

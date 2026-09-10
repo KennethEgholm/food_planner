@@ -37,37 +37,66 @@ const ListIngredients: React.FC = () => {
 		getIngredients();
 	}, [getIngredients]);
 
+	if (ingredients.length === 0) {
+		return (
+			<div className="empty-state">
+				<i className="bi bi-basket" aria-hidden="true" />
+				<h3>No ingredients yet</h3>
+				<p>Add an ingredient above to start building your pantry.</p>
+			</div>
+		);
+	}
+
 	return (
-		<table className="table mt-5 text-center">
-			<thead>
-				<tr>
-					<th>Name</th>
-					<th>Unit</th>
-					<th>Cal/100g</th>
-					<th>Actions</th>
-				</tr>
-			</thead>
-			<tbody>
-				{ingredients.map((ingredient) => (
-					<tr key={ingredient.id}>
-						<td>{ingredient.name}</td>
-						<td>{ingredient.unit || "-"}</td>
-						<td>{ingredient.calories_per_100g != null ? ingredient.calories_per_100g : <span className="text-muted">–</span>}</td>
-						<td>
-							<div className="d-flex justify-content-center gap-2">
-								<EditIngredient ingredient={ingredient} />
-								<button
-									className="btn btn-danger"
-									onClick={() => deleteIngredient(ingredient.id)}
-								>
-									Delete
-								</button>
-							</div>
-						</td>
+		<div className="section-card mt-4">
+			<table className="table table-striped app-table mb-0">
+				<thead>
+					<tr>
+						<th>Name</th>
+						<th className="text-center" style={{ width: "140px" }}>
+							Unit
+						</th>
+						<th className="text-center" style={{ width: "140px" }}>
+							Cal/100g
+						</th>
+						<th className="text-end" style={{ width: "170px" }}>
+							Actions
+						</th>
 					</tr>
-				))}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					{ingredients.map((ingredient) => (
+						<tr key={ingredient.id}>
+							<td className="fw-medium">{ingredient.name}</td>
+							<td className="text-center text-muted-soft">
+								{ingredient.unit || "–"}
+							</td>
+							<td className="text-center">
+								{ingredient.calories_per_100g != null ? (
+									<span className="cal-badge muted">
+										{ingredient.calories_per_100g} kcal
+									</span>
+								) : (
+									<span className="text-muted-soft">–</span>
+								)}
+							</td>
+							<td className="text-end">
+								<div className="d-flex justify-content-end gap-2">
+									<EditIngredient ingredient={ingredient} />
+									<button
+										type="button"
+										className="btn btn-outline-danger"
+										onClick={() => deleteIngredient(ingredient.id)}
+									>
+										Delete
+									</button>
+								</div>
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
+		</div>
 	);
 };
 
