@@ -26,7 +26,7 @@
 
 ### Maintainability / hygiene
 - [x] ~70% duplication: server side deduped (`utils/aiImages.ts`, `utils/calories.ts`, `DAY_ORDER`, `getShoppingList`)
-- [ ] Client form duplication remains (`MealForm.tsx`/`SnackForm.tsx` share most of their layout)
+- [x] Client form duplication — `MealForm`/`SnackForm` are now thin wrappers over a shared `FoodItemForm` (~620 lines removed; also fixed the duplicated `snack-name` DOM id)
 - [x] No client `tsconfig.json`; build doesn't typecheck; ESLint only covers `.js/.jsx` — tsconfig + `tsc --noEmit` on build + typescript-eslint
 - [x] Dead code: `main.jsx`, `InputMeal/EditMeal/InputSnack/EditSnack`, stale `server/dist`, committed `.db` files, unused assets
 - [x] `window.location.reload()` after mutations (16 places), no delete confirmations (also in TODO) — refresh event bus + `window.confirm`
