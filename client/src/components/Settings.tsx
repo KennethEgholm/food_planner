@@ -43,6 +43,8 @@ const Settings: React.FC = () => {
 	const [logsOpen, setLogsOpen] = useState(false);
 	const [logs, setLogs] = useState<{ id: number; level: string; source: string; message: string; created_at: string }[]>([]);
 	const [logsLoading, setLogsLoading] = useState(false);
+	const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+	const [googleBusy, setGoogleBusy] = useState(false);
 
 	useEffect(() => {
 		axios
@@ -55,6 +57,13 @@ const Settings: React.FC = () => {
 				setValues(map);
 			})
 			.catch(() => setError("Failed to load settings."));
+	}, []);
+
+	useEffect(() => {
+		axios
+			.get("/api/auth/google/status")
+			.then((res) => setGoogleConnected(res.data.connected))
+			.catch(() => setGoogleConnected(null));
 	}, []);
 
 	const handleSave = async (key: string) => {
@@ -151,6 +160,31 @@ const Settings: React.FC = () => {
 		const willOpen = !logsOpen;
 		setLogsOpen(willOpen);
 		if (willOpen) fetchLogs();
+	};
+
+	const connectGoogle = async () => {
+		setGoogleBusy(true);
+		try {
+			const res = await axios.get("/api/auth/google/url", {
+				params: { returnPath: "/settings" },
+			});
+			window.location.href = res.data.url;
+		} catch {
+			setError("Failed to start Google connection.");
+			setGoogleBusy(false);
+		}
+	};
+
+	const disconnectGoogle = async () => {
+		setGoogleBusy(true);
+		try {
+			await axios.delete("/api/auth/google/disconnect");
+			setGoogleConnected(false);
+		} catch {
+			setError("Failed to disconnect Google.");
+		} finally {
+			setGoogleBusy(false);
+		}
 	};
 
 	const renderField = (field: SettingField, suffix?: React.ReactNode) => (
@@ -295,6 +329,40 @@ const Settings: React.FC = () => {
 			>
 				{backfillingImages ? "Starting…" : "Backfill missing images via AI"}
 			</button>
+
+			<hr className="my-4" />
+
+			<h5 className="mb-1">Google Tasks</h5>
+			<p className="text-muted small mb-3">
+				Connect your Google account to export shopping lists to Google Tasks.
+			</p>
+			{googleConnected === null ? (
+				<p className="text-muted mb-0">Checking connection…</p>
+			) : googleConnected ? (
+				<div className="d-flex align-items-center gap-2">
+					<span className="badge bg-success">Connected</span>
+					<button
+						type="button"
+						className="btn btn-outline-secondary btn-sm"
+						onClick={disconnectGoogle}
+						disabled={googleBusy}
+					>
+						{googleBusy ? "Disconnecting…" : "Disconnect"}
+					</button>
+				</div>
+			) : (
+				<div className="d-flex align-items-center gap-2">
+					<span className="badge bg-secondary">Not connected</span>
+					<button
+						type="button"
+						className="btn btn-outline-primary btn-sm"
+						onClick={connectGoogle}
+						disabled={googleBusy}
+					>
+						{googleBusy ? "Redirecting…" : "Connect Google Tasks"}
+					</button>
+				</div>
+			)}
 
 			<hr className="my-4" />
 

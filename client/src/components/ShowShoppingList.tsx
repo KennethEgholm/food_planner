@@ -2,6 +2,7 @@ import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useState } from "react";
 import toast from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 
 interface MealPlan {
 	id: number;
@@ -21,7 +22,7 @@ interface ShowShoppingListProps {
 const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 	const [list, setList] = useState<ShoppingListItem[]>([]);
 	const [isConnected, setIsConnected] = useState<boolean>(false);
-	const [authUrl, setAuthUrl] = useState<string>("");
+	const navigate = useNavigate();
 
 	const getShoppingList = useCallback(async () => {
 		try {
@@ -38,16 +39,10 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		try {
 			const res = await axios.get("/api/auth/google/status");
 			setIsConnected(res.data.connected);
-			// Always pre-fetch the auth URL so the Connect button works immediately
-			// when the user needs to (re)authenticate.
-			const urlRes = await axios.get("/api/auth/google/url", {
-				params: { returnPath: `/plans/${mealPlan.id}` },
-			});
-			setAuthUrl(urlRes.data.url);
 		} catch (err: any) {
 			console.error(err.message);
 		}
-	}, [mealPlan.id]);
+	}, []);
 
 	const exportToGoogleTasks = async () => {
 		try {
@@ -56,17 +51,9 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		} catch (err: any) {
 			console.error(err.message);
 			if (err.response?.status === 401) {
-				// Tokens expired/revoked — server has cleared them. Force re-connect.
+				// Tokens expired/revoked — server has cleared them.
 				setIsConnected(false);
-				try {
-					const urlRes = await axios.get("/api/auth/google/url", {
-						params: { returnPath: `/plans/${mealPlan.id}` },
-					});
-					setAuthUrl(urlRes.data.url);
-				} catch {
-					/* ignore */
-				}
-				toast.error("Google connection expired. Please reconnect below.");
+				toast.error("Google connection expired. Please reconnect in Settings.");
 			} else {
 				const serverMsg =
 					typeof err.response?.data === "string"
@@ -77,13 +64,18 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 		}
 	};
 
-	const disconnectGoogle = async () => {
-		try {
-			await axios.delete("/api/auth/google/disconnect");
-			setIsConnected(false);
-			toast.success("Disconnected from Google.");
-		} catch {
-			toast.error("Failed to disconnect.");
+	// Hide the modal before navigating so Bootstrap doesn't leave a backdrop behind.
+	const openSettings = () => {
+		const el = document.getElementById(`shoppingList${mealPlan.id}`);
+		const bsWindow = window as any;
+		const modal = el && bsWindow.bootstrap?.Modal.getInstance(el);
+		if (modal) {
+			el.addEventListener("hidden.bs.modal", () => navigate("/settings"), {
+				once: true,
+			});
+			modal.hide();
+		} else {
+			navigate("/settings");
 		}
 	};
 
@@ -147,32 +139,26 @@ const ShowShoppingList: React.FC<ShowShoppingListProps> = ({ mealPlan }) => {
 
 						<div className="modal-footer">
 							{isConnected ? (
+								<button
+									type="button"
+									className="btn btn-primary"
+									onClick={exportToGoogleTasks}
+								>
+									Export to Google Tasks
+								</button>
+							) : (
 								<>
+									<span className="text-muted small me-auto">
+										Google Tasks is not connected.
+									</span>
 									<button
 										type="button"
-										className="btn btn-primary"
-										onClick={exportToGoogleTasks}
+										className="btn btn-outline-primary"
+										onClick={openSettings}
 									>
-										Export to Google Tasks
-									</button>
-									<button
-										type="button"
-										className="btn btn-outline-secondary"
-										onClick={disconnectGoogle}
-										title="Forget the stored Google credentials"
-									>
-										Disconnect Google
+										Go to Settings
 									</button>
 								</>
-							) : (
-								<a
-									href={authUrl}
-									className="btn btn-outline-primary"
-									target="_blank"
-									rel="noreferrer"
-								>
-									Connect Google Tasks
-								</a>
 							)}
 							<button
 								type="button"
