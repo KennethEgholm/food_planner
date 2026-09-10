@@ -29,6 +29,7 @@ jobs:
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"
             echo "GOOGLE_TASK_CLIENT_ID=${{ secrets.GOOGLE_TASK_CLIENT_ID }}"
             echo "GOOGLE_TASK_CLIENT_SECRET=${{ secrets.GOOGLE_TASK_CLIENT_SECRET }}"
+            echo "OAUTH_STATE_SECRET=${{ secrets.OAUTH_STATE_SECRET }}"
             echo "BOOTSTRAP_ADMIN_EMAIL=${{ secrets.BOOTSTRAP_ADMIN_EMAIL }}"
             echo "VITE_API_URL=${{ secrets.VITE_API_URL }}"
             echo "TUNNEL_TOKEN=${{ secrets.TUNNEL_TOKEN }}"

@@ -1,10 +1,51 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { type Request, type Response, Router } from "express";
 import { google } from "googleapis";
+import { jwtVerify, SignJWT } from "jose";
 import { prisma } from "../db";
 import { getUser } from "../middleware/auth";
 import { appLog } from "../utils/appLog";
 
 const router = Router();
+
+const OAUTH_STATE_COOKIE = "oauth_state";
+const OAUTH_STATE_TTL = "10m";
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+
+// Read lazily: dotenv.config() in index.ts runs after this module is imported.
+function getStateSecret(): Uint8Array {
+	const secret = process.env.OAUTH_STATE_SECRET;
+	if (!secret) {
+		if (process.env.NODE_ENV === "production") {
+			throw new Error("Missing required env var: OAUTH_STATE_SECRET");
+		}
+		return new TextEncoder().encode("dev-only-oauth-state-secret");
+	}
+	return new TextEncoder().encode(secret);
+}
+
+function getStateCookieOptions() {
+	return {
+		httpOnly: true,
+		sameSite: "lax" as const,
+		secure: process.env.NODE_ENV === "production",
+		path: "/",
+		maxAge: OAUTH_STATE_TTL_MS,
+	};
+}
+
+// Only allow same-site absolute paths as redirect targets after OAuth.
+function sanitizeReturnPath(value: unknown): string {
+	if (typeof value !== "string") return "/plans";
+	if (!value.startsWith("/") || value.startsWith("//")) return "/plans";
+	return value;
+}
+
+function safeEqual(a: string, b: string): boolean {
+	const bufA = Buffer.from(a);
+	const bufB = Buffer.from(b);
+	return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
 
 function getOAuthClient() {
 	const CLIENT_ID = process.env.GOOGLE_TASK_CLIENT_ID;
@@ -32,14 +73,26 @@ function getOAuthClient() {
 }
 
 // 1. Generate Auth URL — embed requesting user's email and return path in state
-router.get("/url", (req: Request, res: Response) => {
+router.get("/url", async (req: Request, res: Response) => {
 	const oauth2Client = getOAuthClient();
 	const scopes = ["https://www.googleapis.com/auth/tasks"];
 
-	const returnPath = (req.query.returnPath as string) || "/plans";
-	const state = Buffer.from(
-		JSON.stringify({ email: getUser(req).email, returnPath }),
-	).toString("base64");
+	const returnPath = sanitizeReturnPath(req.query.returnPath);
+	const nonce = randomBytes(16).toString("hex");
+
+	// State is signed so the callback can trust the email it carries, and the
+	// nonce is mirrored in an HttpOnly cookie to bind it to this browser.
+	const state = await new SignJWT({
+		email: getUser(req).email,
+		returnPath,
+		nonce,
+	})
+		.setProtectedHeader({ alg: "HS256" })
+		.setIssuedAt()
+		.setExpirationTime(OAUTH_STATE_TTL)
+		.sign(getStateSecret());
+
+	res.cookie(OAUTH_STATE_COOKIE, nonce, getStateCookieOptions());
 
 	const url = oauth2Client.generateAuthUrl({
 		access_type: "offline",
@@ -51,7 +104,7 @@ router.get("/url", (req: Request, res: Response) => {
 	res.json({ url });
 });
 
-// 2. OAuth Callback — decode user email from state and save tokens per user
+// 2. OAuth Callback — verify signed state and save tokens per user
 router.get("/callback", async (req: Request, res: Response) => {
 	const { code, state } = req.query;
 
@@ -64,13 +117,27 @@ router.get("/callback", async (req: Request, res: Response) => {
 
 	let userEmail: string;
 	let returnPath = "/plans";
+	let nonce: string;
 	try {
-		const parsed = JSON.parse(Buffer.from(state, "base64").toString("utf8"));
-		userEmail = parsed.email;
-		returnPath = parsed.returnPath || "/plans";
+		const { payload } = await jwtVerify(state, getStateSecret(), {
+			algorithms: ["HS256"],
+		});
+		if (typeof payload.email !== "string" || typeof payload.nonce !== "string") {
+			return res.status(400).send("Invalid state parameter");
+		}
+		userEmail = payload.email;
+		returnPath = sanitizeReturnPath(payload.returnPath);
+		nonce = payload.nonce;
 	} catch {
 		return res.status(400).send("Invalid state parameter");
 	}
+
+	const cookieNonce = req.cookies?.[OAUTH_STATE_COOKIE];
+	if (typeof cookieNonce !== "string" || !safeEqual(cookieNonce, nonce)) {
+		res.clearCookie(OAUTH_STATE_COOKIE, getStateCookieOptions());
+		return res.status(400).send("Invalid state parameter");
+	}
+	res.clearCookie(OAUTH_STATE_COOKIE, getStateCookieOptions());
 
 	try {
 		const oauth2Client = getOAuthClient();

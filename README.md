@@ -22,6 +22,7 @@ The app enforces a two-tier role system:
 CF_TEAM_DOMAIN=myteam.cloudflareaccess.com   # Cloudflare Access team domain
 CF_AUD=<audience-tag>                         # Cloudflare Access Application Audience Tag
 BOOTSTRAP_ADMIN_EMAIL=you@example.com         # Email to grant ADMIN on first login
+OAUTH_STATE_SECRET=<random-32-bytes>          # Signs the Google OAuth state (openssl rand -hex 32)
 ```
 
 Find the Audience Tag in the Cloudflare Zero Trust dashboard → Access → Applications → your app → Overview.
@@ -80,6 +81,7 @@ If the database container is not running (e.g. first ever deploy), the backup st
 | `DATABASE_URL` | Full PostgreSQL connection URL |
 | `GOOGLE_TASK_CLIENT_ID` | Google OAuth client ID |
 | `GOOGLE_TASK_CLIENT_SECRET` | Google OAuth client secret |
+| `OAUTH_STATE_SECRET` | Random secret signing the Google OAuth state (`openssl rand -hex 32`) |
 | `BOOTSTRAP_ADMIN_EMAIL` | Email to bootstrap the first admin |
 | `VITE_API_URL` | Public URL of the app (used by Vite at build time) |
 | `TUNNEL_TOKEN` | Cloudflare tunnel token |

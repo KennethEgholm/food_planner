@@ -1,4 +1,5 @@
 import path from "node:path";
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express, { type Express, type Request, type Response } from "express";
@@ -18,6 +19,7 @@ if (!PORT) throw new Error("Missing required env var: SERVER_PORT");
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Google OAuth callback is exempt from CF JWT auth — secured by Google's one-time

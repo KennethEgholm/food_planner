@@ -19,6 +19,8 @@ services:
   server:
     build: ./server
     container_name: food_planner_server
+    env_file:
+      - .env
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
     environment:
