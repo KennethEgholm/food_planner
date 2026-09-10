@@ -57,7 +57,9 @@ There is no test suite.
 ### Authentication
 
 - Cloudflare Access JWT verification on all routes (middleware in `server/index.ts`)
-- In development (`NODE_ENV=development`): JWT check bypassed, uses `BOOTSTRAP_ADMIN_EMAIL` as mock admin
+- In development, JWT check is bypassed only when both `NODE_ENV=development` and `AUTH_DEV_BYPASS=true`; uses `BOOTSTRAP_ADMIN_EMAIL` as mock admin (fails closed otherwise)
+- Uploaded files under `/uploads` are served behind the auth middleware (`X-Content-Type-Options: nosniff`); uploads are limited to raster images (no SVG), max 10 MB, extension derived from MIME type
+- `GET /settings` never returns API key values (only `has_value`); blank secret values on `PUT` keep the stored key
 - Two roles: `ADMIN` (full CRUD) and `USER` (read-only / GET only)
 - Google OAuth for Google Tasks API integration (per-user tokens stored in DB)
 

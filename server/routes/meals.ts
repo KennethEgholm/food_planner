@@ -1,26 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import express, { type Request, type Response } from "express";
-import multer from "multer";
 import { prisma } from "../db";
 import { requireAdmin } from "../middleware/auth";
 import { appLog } from "../utils/appLog";
+import { imageUpload } from "../utils/upload";
 
 const router = express.Router();
-
-// Configure multer
-const storage = multer.diskStorage({
-	destination: (_req, _file, cb) => {
-		cb(null, "uploads/");
-	},
-	filename: (_req, file, cb) => {
-		// Create unique filename
-		const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-		cb(null, uniqueSuffix + path.extname(file.originalname));
-	},
-});
-
-const upload = multer({ storage: storage });
 
 // Fire-and-forget: generate a representative image via xAI if none exists
 async function generateRepresentativeImageIfMissing(mealId: number): Promise<void> {
@@ -92,7 +78,7 @@ async function generateRepresentativeImageIfMissing(mealId: number): Promise<voi
 router.post(
 	"/",
 	requireAdmin,
-	upload.array("images", 10),
+	imageUpload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { name, suitable_for_weekend, suitable_for_lunch } = req.body;
@@ -199,7 +185,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
 router.put(
 	"/:id",
 	requireAdmin,
-	upload.array("images", 10),
+	imageUpload.array("images", 10),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;
@@ -317,7 +303,7 @@ router.delete(
 router.put(
 	"/:id/representative-image",
 	requireAdmin,
-	upload.single("image"),
+	imageUpload.single("image"),
 	async (req: Request, res: Response): Promise<void> => {
 		try {
 			const { id } = req.params;

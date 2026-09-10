@@ -20,7 +20,6 @@ if (!PORT) throw new Error("Missing required env var: SERVER_PORT");
 app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Google OAuth callback is exempt from CF JWT auth — secured by Google's one-time
 // code + signed state instead. Skip JWT verification for that path only.
@@ -28,6 +27,14 @@ app.use((req, res, next) => {
 	if (req.path === "/auth/google/callback") return next();
 	return verifyCloudflareJWT(req, res, next);
 });
+
+// Uploaded files are private: this sits behind the auth middleware above.
+app.use(
+	"/uploads",
+	express.static(path.join(process.cwd(), "uploads"), {
+		setHeaders: (res) => res.setHeader("X-Content-Type-Options", "nosniff"),
+	}),
+);
 
 app.get("/", (_req: Request, res: Response) => {
 	res.send("Food Planner API is running");
@@ -44,7 +51,8 @@ app.use("/auth/google", authRoutes);
 // Global error handler
 app.use((err: any, _req: Request, res: Response, _next: any) => {
 	console.error(err.stack);
-	res.status(500).json({ error: err.message || "Something went wrong!" });
+	const status = err?.status ?? (err?.name === "MulterError" ? 400 : 500);
+	res.status(status).json({ error: err.message || "Something went wrong!" });
 });
 
 app.listen(PORT, () => {

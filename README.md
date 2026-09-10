@@ -15,7 +15,7 @@ The app enforces a two-tier role system:
 - Cloudflare injects a signed JWT (`CF-Access-Jwt-Assertion`) on every request. The server verifies this JWT with Cloudflare's public keys.
 - User roles are stored in the `users` database table. A new user's role defaults to `USER`.
 - The first admin is bootstrapped via the `BOOTSTRAP_ADMIN_EMAIL` environment variable.
-- In development (`NODE_ENV !== "production"`), JWT verification is bypassed and `BOOTSTRAP_ADMIN_EMAIL` is used as a mock admin.
+- In development, JWT verification is bypassed only when **both** `NODE_ENV=development` and `AUTH_DEV_BYPASS=true` are set; `BOOTSTRAP_ADMIN_EMAIL` is then used as a mock admin. Any other value (including an unset `NODE_ENV`) fails closed and verifies the JWT.
 
 ### Required environment variables (production)
 ```

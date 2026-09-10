@@ -30,6 +30,7 @@ const THRESHOLD_FIELDS: SettingField[] = [
 const Settings: React.FC = () => {
 	const { theme, setTheme } = useTheme();
 	const [values, setValues] = useState<Record<string, string>>({});
+	const [hasValue, setHasValue] = useState<Record<string, boolean>>({});
 	const [saving, setSaving] = useState<Record<string, boolean>>({});
 	const [saved, setSaved] = useState<Record<string, boolean>>({});
 	const [error, setError] = useState<string | null>(null);
@@ -53,10 +54,13 @@ const Settings: React.FC = () => {
 			.get("/api/settings")
 			.then((res) => {
 				const map: Record<string, string> = {};
+				const stored: Record<string, boolean> = {};
 				for (const row of res.data) {
 					map[row.key] = row.value ?? "";
+					stored[row.key] = !!row.has_value;
 				}
 				setValues(map);
+				setHasValue(stored);
 			})
 			.catch(() => setError("Failed to load settings."));
 	}, []);
@@ -69,6 +73,11 @@ const Settings: React.FC = () => {
 	}, []);
 
 	const handleSave = async (key: string) => {
+		const isSecret = key.endsWith("_api_key");
+		// A blank secret input means "keep the stored key" — nothing to save.
+		if (isSecret && !(values[key] ?? "").trim()) {
+			return;
+		}
 		setSaving((s) => ({ ...s, [key]: true }));
 		try {
 			await axios.put(`/api/settings/${key}`, { value: values[key] ?? "" });
@@ -193,13 +202,20 @@ const Settings: React.FC = () => {
 		<div className="mb-3" key={field.key}>
 			<label htmlFor={`setting-${field.key}`} className="form-label fw-semibold">
 				{field.label}
+				{field.type === "password" && hasValue[field.key] && (
+					<span className="badge bg-secondary ms-2">Stored</span>
+				)}
 			</label>
 			<div className="input-group">
 				<input
 					id={`setting-${field.key}`}
 					type={field.type ?? "text"}
 					className="form-control"
-					placeholder={field.placeholder}
+					placeholder={
+						field.type === "password" && hasValue[field.key]
+							? "Leave blank to keep the stored key"
+							: field.placeholder
+					}
 					value={values[field.key] ?? ""}
 					onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
 				/>

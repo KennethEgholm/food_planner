@@ -31,13 +31,20 @@ export function getUser(req: Request): { email: string; role: string } {
 const CF_TEAM_DOMAIN = process.env.CF_TEAM_DOMAIN;
 const CF_AUD = process.env.CF_AUD;
 const BOOTSTRAP_ADMIN_EMAIL = process.env.BOOTSTRAP_ADMIN_EMAIL;
-const isDev = process.env.NODE_ENV !== "production";
+
+// Fail closed: the bypass requires both an explicit development environment
+// and an explicit opt-in flag. A missing or unexpected NODE_ENV (e.g. unset in
+// production) verifies the Cloudflare JWT instead of skipping it.
+const devBypassEnabled =
+	process.env.NODE_ENV === "development" &&
+	process.env.AUTH_DEV_BYPASS === "true";
+let warnedAboutDevBypass = false;
 
 // ─── Middleware: verify Cloudflare Access JWT ─────────────────────────────────
 
 /**
  * Verifies the Cloudflare Access JWT on every request.
- * In development (NODE_ENV !== "production") the check is bypassed and
+ * When NODE_ENV=development AND AUTH_DEV_BYPASS=true the check is bypassed and
  * BOOTSTRAP_ADMIN_EMAIL is used as the current user.
  */
 export const verifyCloudflareJWT = async (
@@ -45,8 +52,16 @@ export const verifyCloudflareJWT = async (
 	res: Response,
 	next: NextFunction,
 ): Promise<void> => {
-	// ── Development bypass ──────────────────────────────────────────────────
-	if (isDev) {
+	// ── Development bypass (explicit opt-in only) ───────────────────────────
+	if (devBypassEnabled) {
+		if (!warnedAboutDevBypass) {
+			console.warn(
+				`[auth] DEV AUTH BYPASS ENABLED — all requests run as ${
+					BOOTSTRAP_ADMIN_EMAIL || "dev@localhost"
+				}`,
+			);
+			warnedAboutDevBypass = true;
+		}
 		const devEmail = BOOTSTRAP_ADMIN_EMAIL || "dev@localhost";
 		const user = await prisma.users.upsert({
 			where: { email: devEmail },
