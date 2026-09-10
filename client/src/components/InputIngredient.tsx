@@ -3,6 +3,7 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
+import { notifyDataChange } from "../utils/refresh";
 
 const InputIngredient: React.FC = () => {
 	const [name, setName] = useState<string>("");
@@ -23,7 +24,7 @@ const InputIngredient: React.FC = () => {
 			const body: Record<string, unknown> = { name, unit };
 			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
 			await axios.post("/api/ingredients", body);
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 		}

@@ -4,6 +4,7 @@ import axios from "axios";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import EditIngredient from "./EditIngredient";
+import { onDataChange } from "../utils/refresh";
 
 interface Ingredient {
 	id: number;
@@ -25,6 +26,7 @@ const ListIngredients: React.FC = () => {
 	}, []);
 
 	const deleteIngredient = async (id: number) => {
+		if (!window.confirm("Delete this ingredient? This cannot be undone.")) return;
 		try {
 			await axios.delete(`/api/ingredients/${id}`);
 			setIngredients(ingredients.filter((ingredient) => ingredient.id !== id));
@@ -36,6 +38,8 @@ const ListIngredients: React.FC = () => {
 	useEffect(() => {
 		getIngredients();
 	}, [getIngredients]);
+
+	useEffect(() => onDataChange(getIngredients), [getIngredients]);
 
 	if (ingredients.length === 0) {
 		return (

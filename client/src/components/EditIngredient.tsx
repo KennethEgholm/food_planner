@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useState } from "react";
+import { notifyDataChange } from "../utils/refresh";
 
 interface Ingredient {
 	id: number;
@@ -26,7 +27,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 			const body: Record<string, unknown> = { name, unit };
 			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
 			await axios.put(`/api/ingredients/${ingredient.id}`, body);
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 		}

@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { notifyDataChange } from "../utils/refresh";
 
 interface SnackImage {
 	id: number;
@@ -201,7 +202,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 				await Promise.all(promises);
 			}
 
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 		}
@@ -337,7 +338,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();
-									if (initialSnack) window.location.reload();
+									if (initialSnack) notifyDataChange();
 								}}
 							/>
 						</div>
@@ -613,7 +614,7 @@ const SnackForm: React.FC<SnackFormProps> = ({
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();
-									if (initialSnack) window.location.reload();
+									if (initialSnack) notifyDataChange();
 								}}
 							>
 								Close

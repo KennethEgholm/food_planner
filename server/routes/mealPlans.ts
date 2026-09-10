@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { getUser, requireAdmin } from "../middleware/auth";
 import { generateAIMealPlan } from "../utils/aiMealPlan";
 import { appLog } from "../utils/appLog";
+import { isPrismaNotFound } from "../utils/validation";
 import {
 	clearGoogleTokens,
 	getAuthenticatedClient,
@@ -11,6 +12,58 @@ import {
 } from "./auth";
 
 const router = Router();
+
+const DAY_ORDER: Record<string, number> = {
+	Monday: 1,
+	Tuesday: 2,
+	Wednesday: 3,
+	Thursday: 4,
+	Friday: 5,
+	Saturday: 6,
+	Sunday: 7,
+};
+
+interface ShoppingListItem {
+	name: string;
+	unit: string | null;
+	total_quantity: number;
+}
+
+/** Ingredient quantities across dinners, weekend lunches and snacks. */
+async function getShoppingList(planId: number): Promise<ShoppingListItem[]> {
+	const rows: any[] = await prisma.$queryRaw`
+		SELECT i.name, i.unit, SUM(sub.quantity) as total_quantity 
+		FROM (
+			SELECT mi.ingredient_id, mi.quantity 
+			FROM meal_plan_days mpd
+			JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
+			WHERE mpd.meal_plan_id = ${planId}
+
+			UNION ALL
+
+			SELECT mi.ingredient_id, mi.quantity
+			FROM meal_plan_days mpd
+			JOIN meal_ingredients mi ON mpd.lunch_meal_id = mi.meal_id
+			WHERE mpd.meal_plan_id = ${planId}
+			AND mpd.lunch_meal_id IS NOT NULL
+
+			UNION ALL
+
+			SELECT si.ingredient_id, si.quantity
+			FROM meal_plan_snacks mps
+			JOIN snack_ingredients si ON mps.snack_id = si.snack_id
+			WHERE mps.meal_plan_id = ${planId}
+		) sub
+		JOIN ingredients i ON sub.ingredient_id = i.id
+		GROUP BY i.id, i.name, i.unit
+		ORDER BY i.name
+	`;
+
+	return rows.map((item) => ({
+		...item,
+		total_quantity: Number(item.total_quantity),
+	}));
+}
 
 // Create a meal plan (admin only)
 router.post("/", requireAdmin, async (req: Request, res: Response) => {
@@ -230,16 +283,6 @@ router.get("/current", async (_req: Request, res: Response) => {
 			},
 		});
 
-		const dayOrder: { [key: string]: number } = {
-			Monday: 1,
-			Tuesday: 2,
-			Wednesday: 3,
-			Thursday: 4,
-			Friday: 5,
-			Saturday: 6,
-			Sunday: 7,
-		};
-
 		const sortedDays = daysRaw
 			.map((d: any) => ({
 				day: d.day,
@@ -251,7 +294,7 @@ router.get("/current", async (_req: Request, res: Response) => {
 				lunch_meal_image: d.lunch_meal?.representative_image ?? null,
 			}))
 			.sort(
-				(a: any, b: any) => (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0),
+				(a: any, b: any) => (DAY_ORDER[a.day] || 0) - (DAY_ORDER[b.day] || 0),
 			);
 
 		const snacks = await prisma.meal_plan_snacks.findMany({
@@ -296,16 +339,6 @@ router.get("/:id", async (req: Request, res: Response) => {
 		});
 
 		// Sort days in JS
-		const dayOrder: { [key: string]: number } = {
-			Monday: 1,
-			Tuesday: 2,
-			Wednesday: 3,
-			Thursday: 4,
-			Friday: 5,
-			Saturday: 6,
-			Sunday: 7,
-		};
-
 		const sortedDays = daysRaw
 			.map((d: any) => ({
 				day: d.day,
@@ -317,7 +350,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 				lunch_meal_image: d.lunch_meal?.representative_image ?? null,
 			}))
 			.sort((a: any, b: any) => {
-				return (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);
+				return (DAY_ORDER[a.day] || 0) - (DAY_ORDER[b.day] || 0);
 			});
 
 		// Get snacks for this plan
@@ -392,39 +425,7 @@ router.get("/:id/shopping-list", async (req: Request, res: Response) => {
 		const { id } = req.params;
 		const planId = Number.parseInt(id as string, 10);
 
-		// Use $queryRaw for complex aggregation
-		const shoppingList: any[] = await prisma.$queryRaw`
-            SELECT i.name, i.unit, SUM(sub.quantity) as total_quantity 
-            FROM (
-                SELECT mi.ingredient_id, mi.quantity 
-                FROM meal_plan_days mpd
-                JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
-                WHERE mpd.meal_plan_id = ${planId}
-
-                UNION ALL
-
-                SELECT mi.ingredient_id, mi.quantity
-                FROM meal_plan_days mpd
-                JOIN meal_ingredients mi ON mpd.lunch_meal_id = mi.meal_id
-                WHERE mpd.meal_plan_id = ${planId}
-                AND mpd.lunch_meal_id IS NOT NULL
-                
-                UNION ALL
-
-                SELECT si.ingredient_id, si.quantity
-                FROM meal_plan_snacks mps
-                JOIN snack_ingredients si ON mps.snack_id = si.snack_id
-                WHERE mps.meal_plan_id = ${planId}
-            ) sub
-            JOIN ingredients i ON sub.ingredient_id = i.id
-            GROUP BY i.id, i.name, i.unit
-            ORDER BY i.name
-        `;
-
-		const safeList = shoppingList.map((item: any) => ({
-			...item,
-			total_quantity: Number(item.total_quantity),
-		}));
+		const safeList = await getShoppingList(planId);
 
 		res.json(safeList);
 	} catch (err: unknown) {
@@ -442,33 +443,7 @@ router.post(
 			const { id } = req.params;
 			const planId = Number.parseInt(id as string, 10);
 
-			const shoppingList: any[] = await prisma.$queryRaw`
-            SELECT i.name, i.unit, SUM(sub.quantity) as total_quantity 
-            FROM (
-                SELECT mi.ingredient_id, mi.quantity 
-                FROM meal_plan_days mpd
-                JOIN meal_ingredients mi ON mpd.meal_id = mi.meal_id
-                WHERE mpd.meal_plan_id = ${planId}
-
-                UNION ALL
-
-                SELECT mi.ingredient_id, mi.quantity
-                FROM meal_plan_days mpd
-                JOIN meal_ingredients mi ON mpd.lunch_meal_id = mi.meal_id
-                WHERE mpd.meal_plan_id = ${planId}
-                AND mpd.lunch_meal_id IS NOT NULL
-
-                UNION ALL
-
-                SELECT si.ingredient_id, si.quantity
-                FROM meal_plan_snacks mps
-                JOIN snack_ingredients si ON mps.snack_id = si.snack_id
-                WHERE mps.meal_plan_id = ${planId}
-            ) sub
-            JOIN ingredients i ON sub.ingredient_id = i.id
-            GROUP BY i.id, i.name, i.unit
-            ORDER BY i.name
-        `;
+			const shoppingList = await getShoppingList(planId);
 
 			if (shoppingList.length === 0) {
 				return res.status(400).json("Shopping list is empty.");
@@ -534,10 +509,10 @@ router.post(
 			}
 			if (err instanceof Error) {
 				appLog("error", "google-tasks", `Export failed: ${err.message}`);
-				res.status(500).send(`Export failed: ${err.message}`);
+				res.status(500).send("Export failed");
 			} else {
 				appLog("error", "google-tasks", "Export failed: Unknown error");
-				res.status(500).send("Export failed: Unknown error");
+				res.status(500).send("Export failed");
 			}
 		}
 	},
@@ -584,11 +559,17 @@ router.put("/:id/days", requireAdmin, async (req: Request, res: Response) => {
 router.delete("/:id", requireAdmin, async (req: Request, res: Response) => {
 	try {
 		const { id } = req.params;
-		await prisma.meal_plans.delete({
-			where: { id: Number.parseInt(id as string, 10) },
-		});
+		const planId = Number.parseInt(id as string, 10);
+		const plan = await prisma.meal_plans.findUnique({ where: { id: planId } });
+		if (!plan) {
+			return res.status(404).json("Meal Plan not found");
+		}
+		await prisma.meal_plans.delete({ where: { id: planId } });
 		res.json("Meal Plan was deleted");
 	} catch (err: unknown) {
+		if (isPrismaNotFound(err)) {
+			return res.status(404).json("Meal Plan not found");
+		}
 		if (err instanceof Error) console.error(err.message);
 		res.status(500).send("Server Error");
 	}

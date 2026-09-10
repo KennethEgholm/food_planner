@@ -83,6 +83,6 @@ Docker Compose (`docker-compose.prod.yml`) with Nginx serving the client, Cloudf
 - Server uses `tsx` for runtime TypeScript execution (no compile step needed)
 - API route handlers check `req.user.role === 'ADMIN'` for write operations
 - Prisma client is instantiated in `server/prisma/client.ts` and imported throughout
-- Meal plan days use string day names: "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lordag", "Sondag" (Danish)
+- Meal plan days use string day names: "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" (English)
 - Ingredient units are: "gram", "centiliter", "deciliter", "stk"
 - The spec is in `specs/spec.md`; `specs/TODO.md` contains unapproved ideas (do not implement from TODO without approval)

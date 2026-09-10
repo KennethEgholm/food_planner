@@ -46,7 +46,7 @@ Food Planner is a web application designed to help users plan their meals for th
 ## Technical Specifications
 - **Frontend**: React.js for building the user interface. Must be fully functional on a mobile device.
 - **Backend**: Node.js with Express for handling API requests and managing data.
-- **Database**: SQLite for storing meal plans, meals, and ingredients.
+- **Database**: PostgreSQL (via Prisma ORM) for storing meal plans, meals, and ingredients.
 - **API**: RESTful API for communication between the frontend and backend.
 - The application uses a monorepository structure, with separate folders for the frontend and backend code.
 - Typescript is used for both frontend and backend development to ensure type safety and improve code quality.
@@ -54,7 +54,7 @@ Food Planner is a web application designed to help users plan their meals for th
 
 ## Routing & Deep Linking
 
-The app uses `react-router-dom` (v6) with `BrowserRouter` for client-side routing. Tab navigation is URL-based, enabling bookmarking and sharing.
+The app uses `react-router-dom` (v7) with `BrowserRouter` for client-side routing. Tab navigation is URL-based, enabling bookmarking and sharing.
 
 | URL | Behaviour |
 |---|---|

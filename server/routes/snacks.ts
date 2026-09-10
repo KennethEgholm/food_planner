@@ -1,78 +1,16 @@
 import fs from "node:fs";
-import path from "node:path";
 import express, { type Request, type Response } from "express";
 import { prisma } from "../db";
 import { requireAdmin } from "../middleware/auth";
-import { appLog } from "../utils/appLog";
+import { generateRepresentativeImageIfMissing } from "../utils/aiImages";
+import { computeCalories, getCalorieThresholds } from "../utils/calories";
 import { imageUpload } from "../utils/upload";
+import {
+	isPrismaForeignKeyError,
+	isPrismaNotFound,
+} from "../utils/validation";
 
 const router = express.Router();
-
-// Fire-and-forget: generate a representative image via xAI if none exists
-async function generateRepresentativeImageIfMissing(snackId: number): Promise<void> {
-	const snack = await prisma.snacks.findUnique({
-		where: { id: snackId },
-		include: { snack_ingredients: { include: { ingredients: true } } },
-	});
-	if (!snack || snack.representative_image) return;
-
-	const aiSettings = await prisma.app_settings.findMany({
-		where: { key: { in: ["image_ai_api_key", "image_ai_base_url", "image_ai_model"] } },
-	});
-	const getSetting = (key: string) => aiSettings.find((s) => s.key === key)?.value || null;
-	const xaiApiKey = getSetting("image_ai_api_key");
-	if (!xaiApiKey) return;
-	const baseUrl = (getSetting("image_ai_base_url") || "https://api.x.ai/v1").replace(/\/$/, "");
-	const imageModel = getSetting("image_ai_model") || "grok-imagine-image";
-
-	const ingredientList = snack.snack_ingredients
-		.map((si: any) => si.ingredients.name)
-		.join(", ");
-	const prompt = ingredientList
-		? `A delicious serving of ${snack.name}, made with ${ingredientList}. Food photography, appetizing, well-lit.`
-		: `A delicious serving of ${snack.name}. Food photography, appetizing, well-lit.`;
-
-	try {
-		const xaiRes = await fetch(`${baseUrl}/images/generations`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${xaiApiKey}`,
-			},
-			body: JSON.stringify({ model: imageModel, prompt, n: 1 }),
-		});
-		if (!xaiRes.ok) {
-			const errBody = await xaiRes.text();
-			appLog("error", "image-gen", `Snack "${snack.name}": xAI API error ${xaiRes.status}: ${errBody}`);
-			return;
-		}
-
-		const xaiData = (await xaiRes.json()) as { data: { url?: string }[] };
-		const imageUrl = xaiData.data?.[0]?.url;
-		if (!imageUrl) {
-			appLog("error", "image-gen", `Snack "${snack.name}": No image URL in response`);
-			return;
-		}
-
-		const imgRes = await fetch(imageUrl);
-		if (!imgRes.ok) {
-			appLog("error", "image-gen", `Snack "${snack.name}": Image download failed (${imgRes.status})`);
-			return;
-		}
-
-		const buffer = Buffer.from(await imgRes.arrayBuffer());
-		const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}.jpg`;
-		const filePath = path.join("uploads", filename);
-		fs.writeFileSync(filePath, buffer);
-
-		await prisma.snacks.update({
-			where: { id: snackId },
-			data: { representative_image: filePath },
-		});
-	} catch (err: unknown) {
-		if (err instanceof Error) appLog("error", "image-gen", `Snack image failed: ${err.message}`);
-	}
-}
 
 // Create a snack (admin only)
 router.post(
@@ -105,11 +43,13 @@ router.post(
 
 			// Fire-and-forget: generate AI dish photo if none was uploaded
 			if (!newSnack.representative_image) {
-				generateRepresentativeImageIfMissing(newSnack.id).catch(console.error);
+				generateRepresentativeImageIfMissing("snack", newSnack.id).catch(
+					console.error,
+				);
 			}
 		} catch (err: any) {
 			console.error(err.message);
-			res.status(500).json({ error: err.message, stack: err.stack });
+			res.status(500).json({ error: "Something went wrong!" });
 		}
 	},
 );
@@ -117,7 +57,7 @@ router.post(
 // Get all snacks
 router.get("/", async (_req: Request, res: Response) => {
 	try {
-		const [allSnacks, thresholdSettings] = await Promise.all([
+		const [allSnacks, thresholds] = await Promise.all([
 			prisma.snacks.findMany({
 				orderBy: { id: "asc" },
 				include: {
@@ -125,45 +65,18 @@ router.get("/", async (_req: Request, res: Response) => {
 					snack_ingredients: { include: { ingredients: true } },
 				},
 			}),
-			prisma.app_settings.findMany({
-				where: { key: { in: ["calorie_low_threshold", "calorie_high_threshold"] } },
-			}),
+			getCalorieThresholds(),
 		]);
 
-		const getSetting = (key: string, def: number) => {
-			const val = thresholdSettings.find((s) => s.key === key)?.value;
-			return val != null ? Number(val) : def;
-		};
-		const lowThreshold = getSetting("calorie_low_threshold", 200);
-		const highThreshold = getSetting("calorie_high_threshold", 300);
-
 		const snacksWithCalories = allSnacks.map((snack) => {
-			let weightedCalories = 0;
-			let totalWeight = 0;
-			let hasCalories = false;
-			for (const si of snack.snack_ingredients) {
-				const cal = (si.ingredients as any).calories_per_100g;
-				const qty = si.quantity != null ? Number(si.quantity) : null;
-				if (cal != null && qty != null) {
-					weightedCalories += (qty / 100) * cal;
-					totalWeight += qty;
-					hasCalories = true;
-				}
-			}
-			const total = hasCalories ? Math.round(weightedCalories) : null;
-			const calories_per_100g =
-				hasCalories && totalWeight > 0
-					? Math.round((weightedCalories / totalWeight) * 100)
-					: null;
-			const calorie_tier =
-				calories_per_100g == null
-					? null
-					: calories_per_100g < lowThreshold
-						? "low"
-						: calories_per_100g > highThreshold
-							? "high"
-							: "medium";
-			return { ...snack, total_calories: total, calories_per_100g, calorie_tier };
+			const calories = computeCalories(
+				snack.snack_ingredients.map((si) => ({
+					calories_per_100g: (si.ingredients as any).calories_per_100g,
+					quantity: si.quantity,
+				})),
+				thresholds,
+			);
+			return { ...snack, ...calories };
 		});
 
 		res.json(snacksWithCalories);
@@ -210,8 +123,14 @@ router.put(
 			res.json("Snack was updated!");
 
 			// Fire-and-forget: generate AI dish photo if the snack still has none
-			generateRepresentativeImageIfMissing(Number(id)).catch(console.error);
+			generateRepresentativeImageIfMissing("snack", Number(id)).catch(
+				console.error,
+			);
 		} catch (err: any) {
+			if (isPrismaNotFound(err)) {
+				res.status(404).json("Snack not found");
+				return;
+			}
 			console.error(err.message);
 			res.status(500).send("Server Error");
 		}
@@ -224,17 +143,16 @@ router.delete(
 	requireAdmin,
 	async (req: Request, res: Response): Promise<void> => {
 		try {
-			const { imageId } = req.params;
-			const image = await prisma.snack_images.findUnique({
-				where: { id: Number(imageId) },
+			const { id, imageId } = req.params;
+			// Scope by parent snack so an image id from another snack cannot be deleted.
+			const image = await prisma.snack_images.findFirst({
+				where: { id: Number(imageId), snack_id: Number(id) },
 			});
 			if (!image) {
 				res.status(404).json("Image not found");
 				return;
 			}
-			await prisma.snack_images.delete({
-				where: { id: Number(imageId) },
-			});
+			await prisma.snack_images.delete({ where: { id: image.id } });
 			fs.unlink(image.path, (err) => {
 				if (err) console.error("Failed to delete image file:", err.message);
 			});
@@ -261,6 +179,7 @@ router.put(
 			}
 			const snack = await prisma.snacks.findUnique({ where: { id: Number(id) } });
 			if (!snack) {
+				fs.unlink(file.path, () => {});
 				res.status(404).json("Snack not found");
 				return;
 			}
@@ -318,15 +237,22 @@ router.post(
 	async (req: Request, res: Response) => {
 		try {
 			const snackId = Number.parseInt(req.params.id as string, 10);
+
+			const snack = await prisma.snacks.findUnique({ where: { id: snackId } });
+			if (!snack) {
+				res.status(404).json("Snack not found");
+				return;
+			}
+
 			// Clear existing so the helper regenerates it
 			await prisma.snacks.update({
 				where: { id: snackId },
 				data: { representative_image: null },
 			});
-			await generateRepresentativeImageIfMissing(snackId);
-			const snack = await prisma.snacks.findUnique({ where: { id: snackId } });
-			if (!snack) return res.status(404).json("Snack not found");
-			res.json({ path: snack.representative_image });
+			await generateRepresentativeImageIfMissing("snack", snackId);
+
+			const updated = await prisma.snacks.findUnique({ where: { id: snackId } });
+			res.json({ path: updated?.representative_image ?? null });
 		} catch (err: unknown) {
 			if (err instanceof Error) console.error(err.message);
 			res.status(500).send("Server Error");
@@ -404,16 +330,27 @@ router.post(
 			const { id } = req.params;
 			const { ingredient_id, quantity } = req.body;
 
-			await prisma.snack_ingredients.create({
-				data: {
+			await prisma.snack_ingredients.upsert({
+				where: {
+					snack_id_ingredient_id: {
+						snack_id: Number(id),
+						ingredient_id: Number(ingredient_id),
+					},
+				},
+				update: { quantity },
+				create: {
 					snack_id: Number(id),
 					ingredient_id: Number(ingredient_id),
-					quantity: Number(quantity),
+					quantity,
 				},
 			});
 
 			res.json("Ingredient added to snack");
 		} catch (err: any) {
+			if (isPrismaForeignKeyError(err)) {
+				res.status(400).json("Unknown snack or ingredient");
+				return;
+			}
 			console.error(err.message);
 			res.status(500).send("Server Error");
 		}
@@ -437,6 +374,10 @@ router.delete(
 			});
 			res.json("Ingredient removed from snack");
 		} catch (err: any) {
+			if (isPrismaNotFound(err)) {
+				res.status(404).json("Ingredient not found on this snack");
+				return;
+			}
 			console.error(err.message);
 			res.status(500).send("Server Error");
 		}
@@ -456,7 +397,7 @@ router.post("/backfill-images", requireAdmin, async (_req: Request, res: Respons
 		(async () => {
 			for (const snack of missing) {
 				try {
-					await generateRepresentativeImageIfMissing(snack.id);
+					await generateRepresentativeImageIfMissing("snack", snack.id);
 					console.log(`[image-backfill] snack "${snack.name}" done`);
 				} catch (err: unknown) {
 					if (err instanceof Error) console.error(`[image-backfill] snack "${snack.name}" failed:`, err.message);

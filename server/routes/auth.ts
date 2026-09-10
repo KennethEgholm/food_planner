@@ -5,6 +5,7 @@ import { jwtVerify, SignJWT } from "jose";
 import { prisma } from "../db";
 import { getUser } from "../middleware/auth";
 import { appLog } from "../utils/appLog";
+import { decryptSecret, encryptSecret } from "../utils/crypto";
 
 const router = Router();
 
@@ -145,11 +146,12 @@ router.get("/callback", async (req: Request, res: Response) => {
 		const { tokens } = await oauth2Client.getToken(code);
 
 		const tokensString = JSON.stringify(tokens);
+		const encryptedTokens = encryptSecret(tokensString);
 
 		await prisma.user_google_tokens.upsert({
 			where: { user_email: userEmail },
-			update: { tokens: tokensString },
-			create: { user_email: userEmail, tokens: tokensString },
+			update: { tokens: encryptedTokens },
+			create: { user_email: userEmail, tokens: encryptedTokens },
 		});
 
 		console.log(`Tokens saved for user: ${userEmail}`);
@@ -226,7 +228,7 @@ export const getAuthenticatedClient = async (userEmail: string) => {
 		);
 	}
 
-	const tokens = JSON.parse(result.tokens);
+	const tokens = JSON.parse(decryptSecret(result.tokens));
 	if (!tokens.refresh_token) {
 		// Without a refresh token we cannot survive access-token expiry.
 		// Force a fresh consent flow.
@@ -250,7 +252,7 @@ export const getAuthenticatedClient = async (userEmail: string) => {
 			};
 			await prisma.user_google_tokens.update({
 				where: { user_email: userEmail },
-				data: { tokens: JSON.stringify(merged) },
+				data: { tokens: encryptSecret(JSON.stringify(merged)) },
 			});
 		} catch (err: any) {
 			appLog("error", "google-oauth", `Token refresh save failed: ${err.message ?? err}`);

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import EditMealPlan from "./EditMealPlan";
 import ShowMealPlan from "./ShowMealPlan";
 import ShowShoppingList from "./ShowShoppingList";
+import { onDataChange } from "../utils/refresh";
 
 interface MealPlan {
 	id: number;
@@ -24,6 +25,7 @@ const ListMealPlans: React.FC = () => {
 	}, []);
 
 	const deletePlan = async (id: number) => {
+		if (!window.confirm("Delete this meal plan? This cannot be undone.")) return;
 		try {
 			await axios.delete(`/api/meal-plans/${id}`);
 			setPlans(plans.filter((plan) => plan.id !== id));
@@ -44,6 +46,8 @@ const ListMealPlans: React.FC = () => {
 	useEffect(() => {
 		getPlans();
 	}, [getPlans]);
+
+	useEffect(() => onDataChange(getPlans), [getPlans]);
 
 	const sorted = [...plans].sort(
 		(a, b) => Number(b.is_current) - Number(a.is_current),

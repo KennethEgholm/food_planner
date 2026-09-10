@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { onDataChange } from "../utils/refresh";
 
 interface MealPlanDay {
 	day: string;
@@ -52,6 +53,8 @@ const CurrentMealPlan: React.FC = () => {
 	useEffect(() => {
 		fetchPlan();
 	}, [fetchPlan]);
+
+	useEffect(() => onDataChange(fetchPlan), [fetchPlan]);
 
 	useEffect(() => {
 		if (!fullScreenImage) return;

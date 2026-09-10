@@ -3,6 +3,7 @@ import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MealForm from "./MealForm";
+import { onDataChange } from "../utils/refresh";
 
 interface MealImage {
 	id: number;
@@ -68,6 +69,7 @@ const ListMeals: React.FC = () => {
 	}, []);
 
 	const deleteMeal = async (id: number) => {
+		if (!window.confirm("Delete this meal? This cannot be undone.")) return;
 		try {
 			await axios.delete(`/api/meals/${id}`);
 			setMeals(meals.filter((meal) => meal.id !== id));
@@ -79,6 +81,8 @@ const ListMeals: React.FC = () => {
 	useEffect(() => {
 		getMeals();
 	}, [getMeals]);
+
+	useEffect(() => onDataChange(getMeals), [getMeals]);
 
 	useEffect(() => {
 		if (!fullScreenImage) return;

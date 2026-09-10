@@ -2,6 +2,7 @@ import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { notifyDataChange } from "../utils/refresh";
 
 interface MealImage {
 	id: number;
@@ -224,7 +225,7 @@ const MealForm: React.FC<MealFormProps> = ({
 				await Promise.all(promises);
 			}
 
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 		}
@@ -390,7 +391,7 @@ const MealForm: React.FC<MealFormProps> = ({
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();
-									if (initialMeal && !readOnly) window.location.reload();
+									if (initialMeal && !readOnly) notifyDataChange();
 								}}
 							/>
 						</div>
@@ -702,7 +703,7 @@ const MealForm: React.FC<MealFormProps> = ({
 								data-bs-dismiss="modal"
 								onClick={() => {
 									resetForm();
-									if (initialMeal && !readOnly) window.location.reload();
+									if (initialMeal && !readOnly) notifyDataChange();
 								}}
 							>
 								Close

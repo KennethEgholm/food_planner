@@ -2,6 +2,7 @@ import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import SnackForm from "./SnackForm";
+import { onDataChange } from "../utils/refresh";
 
 interface SnackImage {
 	id: number;
@@ -33,6 +34,7 @@ const ListSnacks: React.FC = () => {
 	}, []);
 
 	const deleteSnack = async (id: number) => {
+		if (!window.confirm("Delete this snack? This cannot be undone.")) return;
 		try {
 			await axios.delete(`/api/snacks/${id}`);
 			setSnacks(snacks.filter((snack) => snack.id !== id));
@@ -54,6 +56,8 @@ const ListSnacks: React.FC = () => {
 	useEffect(() => {
 		getSnacks();
 	}, [getSnacks]);
+
+	useEffect(() => onDataChange(getSnacks), [getSnacks]);
 
 	return (
 		<Fragment>

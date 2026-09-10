@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { notifyDataChange } from "../utils/refresh";
 
 interface Meal {
 	id: number;
@@ -141,7 +142,7 @@ const EditMealPlan: React.FC<EditMealPlanProps> = ({ mealPlan }) => {
 				}),
 			);
 			await Promise.all(promises);
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 		}

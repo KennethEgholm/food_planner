@@ -1,5 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import type React from "react";
+import { createContext, useContext } from "react";
 
 export type ThemeId = "warm" | "fresh" | "dark";
 
@@ -28,7 +27,7 @@ type ThemeContextValue = {
 	setTheme: (theme: ThemeId) => void;
 };
 
-const ThemeContext = createContext<ThemeContextValue>({
+export const ThemeContext = createContext<ThemeContextValue>({
 	theme: "warm",
 	setTheme: () => {},
 });
@@ -44,29 +43,6 @@ export function readStoredTheme(): ThemeId {
 	}
 	return "warm";
 }
-
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
-	children,
-}) => {
-	const [theme, setTheme] = useState<ThemeId>(readStoredTheme);
-
-	useEffect(() => {
-		const root = document.documentElement;
-		root.dataset.theme = theme;
-		root.dataset.bsTheme = theme === "dark" ? "dark" : "light";
-		try {
-			localStorage.setItem(STORAGE_KEY, theme);
-		} catch {
-			// ignore
-		}
-	}, [theme]);
-
-	return (
-		<ThemeContext.Provider value={{ theme, setTheme }}>
-			{children}
-		</ThemeContext.Provider>
-	);
-};
 
 export function useTheme(): ThemeContextValue {
 	return useContext(ThemeContext);

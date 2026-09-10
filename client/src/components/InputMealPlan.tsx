@@ -2,6 +2,7 @@ import axios from "axios";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { notifyDataChange } from "../utils/refresh";
 
 const InputMealPlan: React.FC = () => {
 	const [name, setName] = useState<string>("");
@@ -20,7 +21,7 @@ const InputMealPlan: React.FC = () => {
 		try {
 			const body = { name };
 			await axios.post("/api/meal-plans", body);
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 			if (err.response?.data) {
@@ -36,7 +37,7 @@ const InputMealPlan: React.FC = () => {
 		try {
 			const body = { name };
 			await axios.post("/api/meal-plans/random", body);
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 			if (err.response?.data) {
@@ -52,7 +53,7 @@ const InputMealPlan: React.FC = () => {
 		setAiLoading(true);
 		try {
 			await axios.post("/api/meal-plans/ai", { name });
-			window.location.reload();
+			notifyDataChange();
 		} catch (err: any) {
 			console.error(err.message);
 			const msg = err.response?.data || "Failed to generate AI meal plan";
