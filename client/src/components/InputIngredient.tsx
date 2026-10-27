@@ -3,10 +3,8 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { waitForIngredientCalories } from "../utils/ingredientCalories";
 import { notifyDataChange, onDataChange } from "../utils/refresh";
-
-const CALORIE_POLL_ATTEMPTS = 8;
-const CALORIE_POLL_DELAY_MS = 2000;
 
 interface IngredientRow {
 	id: number;
@@ -32,28 +30,6 @@ const InputIngredient: React.FC = () => {
 
 	useEffect(() => onDataChange(refreshCount), [refreshCount]);
 
-	/**
-	 * The server fills calories via AI after the POST responds, so the first
-	 * refetch sees null. Poll until the value lands, then refresh the lists.
-	 */
-	const waitForCalories = async (id: number) => {
-		for (let attempt = 0; attempt < CALORIE_POLL_ATTEMPTS; attempt++) {
-			await new Promise((resolve) =>
-				setTimeout(resolve, CALORIE_POLL_DELAY_MS),
-			);
-			try {
-				const { data } = await axios.get<IngredientRow[]>("/api/ingredients");
-				const ingredient = data.find((item) => item.id === id);
-				if (ingredient?.calories_per_100g != null) {
-					notifyDataChange();
-					return;
-				}
-			} catch {
-				return;
-			}
-		}
-	};
-
 	const onSubmit = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
@@ -61,7 +37,7 @@ const InputIngredient: React.FC = () => {
 			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
 			const { data } = await axios.post<IngredientRow>("/api/ingredients", body);
 			notifyDataChange();
-			if (caloriesPer100g === "") void waitForCalories(data.id);
+			if (caloriesPer100g === "") void waitForIngredientCalories(data.id);
 		} catch (err: any) {
 			console.error(err.message);
 		}

@@ -1,6 +1,7 @@
 import axios from "axios";
 import type React from "react";
 import { Fragment, useState } from "react";
+import { waitForIngredientCalories } from "../utils/ingredientCalories";
 import { notifyDataChange } from "../utils/refresh";
 
 interface Ingredient {
@@ -28,6 +29,7 @@ const EditIngredient: React.FC<EditIngredientProps> = ({ ingredient }) => {
 			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
 			await axios.put(`/api/ingredients/${ingredient.id}`, body);
 			notifyDataChange();
+			if (caloriesPer100g === "") void waitForIngredientCalories(ingredient.id);
 		} catch (err: any) {
 			console.error(err.message);
 		}
