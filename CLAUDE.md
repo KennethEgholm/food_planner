@@ -34,7 +34,7 @@ cd client && npm run dev    # vite dev server on port 5174, proxies /api to loca
 | Run Prisma migration | `cd server && npx prisma migrate dev --name <name>` |
 | Generate Prisma client | `cd server && npx prisma generate` |
 | Deploy migrations | `cd server && npx prisma migrate deploy` |
-| Production deploy | `npm run deploy` (runs `deploy.sh`, uses GitHub Actions self-hosted runner) |
+| Production deploy | `npm run deploy` (dispatches the `deploy.yml` GitHub Actions workflow on the self-hosted runner) |
 
 There is no test suite.
 

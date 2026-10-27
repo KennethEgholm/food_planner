@@ -2,8 +2,16 @@
 
 import axios from "axios";
 import type React from "react";
-import { Fragment, useEffect, useState } from "react";
-import { notifyDataChange } from "../utils/refresh";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { notifyDataChange, onDataChange } from "../utils/refresh";
+
+const CALORIE_POLL_ATTEMPTS = 8;
+const CALORIE_POLL_DELAY_MS = 2000;
+
+interface IngredientRow {
+	id: number;
+	calories_per_100g?: number | null;
+}
 
 const InputIngredient: React.FC = () => {
 	const [name, setName] = useState<string>("");
@@ -11,20 +19,49 @@ const InputIngredient: React.FC = () => {
 	const [caloriesPer100g, setCaloriesPer100g] = useState<string>("");
 	const [count, setCount] = useState<number | null>(null);
 
-	useEffect(() => {
+	const refreshCount = useCallback(() => {
 		axios
 			.get("/api/ingredients")
 			.then((res) => setCount(res.data.length))
 			.catch(() => {});
 	}, []);
 
+	useEffect(() => {
+		refreshCount();
+	}, [refreshCount]);
+
+	useEffect(() => onDataChange(refreshCount), [refreshCount]);
+
+	/**
+	 * The server fills calories via AI after the POST responds, so the first
+	 * refetch sees null. Poll until the value lands, then refresh the lists.
+	 */
+	const waitForCalories = async (id: number) => {
+		for (let attempt = 0; attempt < CALORIE_POLL_ATTEMPTS; attempt++) {
+			await new Promise((resolve) =>
+				setTimeout(resolve, CALORIE_POLL_DELAY_MS),
+			);
+			try {
+				const { data } = await axios.get<IngredientRow[]>("/api/ingredients");
+				const ingredient = data.find((item) => item.id === id);
+				if (ingredient?.calories_per_100g != null) {
+					notifyDataChange();
+					return;
+				}
+			} catch {
+				return;
+			}
+		}
+	};
+
 	const onSubmit = async (e: React.SyntheticEvent) => {
 		e.preventDefault();
 		try {
 			const body: Record<string, unknown> = { name, unit };
 			if (caloriesPer100g !== "") body.calories_per_100g = Number(caloriesPer100g);
-			await axios.post("/api/ingredients", body);
+			const { data } = await axios.post<IngredientRow>("/api/ingredients", body);
 			notifyDataChange();
+			if (caloriesPer100g === "") void waitForCalories(data.id);
 		} catch (err: any) {
 			console.error(err.message);
 		}

@@ -8,6 +8,6 @@
 - Align the views so they look more consistent and professional.
 
 ### Issues
-Check Containers for warnings / dependency errors ..
-When I add a new ingredient to the list, the energy density measure is not updated. I need to browse away or manually refresh the page.
+- ~~Check Containers for warnings / dependency errors~~ Compose files validate; dependency advisories cleared via `npm audit fix`.
+- ~~When I add a new ingredient to the list, the energy density measure is not updated. I need to browse away or manually refresh the page.~~ Root cause: the server autofills calories *after* responding, so the client's immediate refetch cached `null`. Fixed: `InputIngredient` now polls the new ingredient until the value arrives.
 
