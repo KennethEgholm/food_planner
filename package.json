@@ -4,7 +4,7 @@
 	"main": "index.js",
 	"scripts": {
 		"deploy": "gh workflow run deploy.yml",
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "npm --prefix server test && npm --prefix client test"
 	},
 	"keywords": [],
 	"author": "",

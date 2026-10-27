@@ -66,6 +66,7 @@ The app uses `react-router-dom` (v7) with `BrowserRouter` for client-side routin
 | `/meals/:id` | Meals tab with the specified meal's modal auto-opened |
 | `/snacks` | Snacks tab |
 | `/ingredients` | Ingredients tab |
+| `/settings` | Settings tab (AI model, calorie thresholds, Google Tasks connection) |
 
 Deep linking to a meal plan (`/plans/:id`) opens the plan's detail modal automatically and navigates back to `/plans` when the modal is closed. Clicking a plan name in the list updates the URL to `/plans/:id`, making the link shareable.
 

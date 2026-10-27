@@ -34,9 +34,12 @@ cd client && npm run dev    # vite dev server on port 5174, proxies /api to loca
 | Run Prisma migration | `cd server && npx prisma migrate dev --name <name>` |
 | Generate Prisma client | `cd server && npx prisma generate` |
 | Deploy migrations | `cd server && npx prisma migrate deploy` |
+| Run all tests | `npm test` (server then client) |
+| Server tests | `cd server && npm test` (Node test runner via `tsx`) |
+| Client tests | `cd client && npm test` (Vitest) |
 | Production deploy | `npm run deploy` (dispatches the `deploy.yml` GitHub Actions workflow on the self-hosted runner) |
 
-There is no test suite.
+Neither suite needs a database: server tests cover pure helpers, client tests mock Axios.
 
 ## Architecture
 
@@ -77,6 +80,8 @@ PostgreSQL 15. Core entities: `meals`, `snacks`, `ingredients`, `meal_plans`. Ju
 ### Production
 
 Docker Compose (`docker-compose.prod.yml`) with Nginx serving the client, Cloudflare Tunnel for reverse proxy. Deploy via GitHub Actions self-hosted runner.
+
+`deploy.yml` calls the reusable `test.yml` workflow first and `needs: test`, so a failing typecheck, lint, build, or test blocks deployment to production. `test.yml` also runs directly on pull requests.
 
 ## Conventions
 
