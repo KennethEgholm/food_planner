@@ -420,6 +420,7 @@ h6,
 }
 
 .app-header-inner {
+	position: relative;
 	display: flex;
 	align-items: center;
 	gap: 1rem;
@@ -455,6 +456,24 @@ h6,
 	font-weight: 600;
 	font-size: 1.15rem;
 	letter-spacing: -0.01em;
+}
+
+.app-nav-toggle {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	border: 1px solid var(--bs-border-color);
+	border-radius: 10px;
+	background: var(--bs-card-bg);
+	color: var(--bs-body-color);
+	font-size: 1.35rem;
+}
+
+.app-nav-toggle:hover {
+	background: var(--bs-tertiary-bg);
 }
 
 .app-nav {
@@ -1192,10 +1211,42 @@ h6,
 		gap: 0.5rem;
 	}
 
+	.app-nav-toggle {
+		display: inline-flex;
+		order: 1;
+		margin-left: auto;
+	}
+
+	.app-nav-settings {
+		order: 2;
+	}
+
 	.app-nav {
+		position: absolute;
+		top: 100%;
+		right: 1rem;
+		left: 1rem;
+		display: none;
 		order: 3;
-		width: 100%;
+		width: auto;
 		padding-bottom: 0.15rem;
+		background: var(--bs-card-bg);
+	}
+
+	.app-nav.is-open {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+		overflow-x: visible;
+		padding: 0.5rem;
+		border: 1px solid var(--bs-border-color);
+		border-radius: var(--bs-border-radius-lg);
+		box-shadow: var(--app-shadow-lg);
+	}
+
+	.app-nav.is-open .app-nav-link {
+		padding: 0.65rem 0.8rem;
+		border-radius: var(--bs-border-radius);
 	}
 
 	.app-brand-name {

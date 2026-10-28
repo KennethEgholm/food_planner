@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Toaster } from "react-hot-toast";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import "./theme.css";
@@ -27,6 +27,8 @@ const NAV_ITEMS = [
 function App() {
 	const [mealCount, setMealCount] = useState<number | null>(null);
 	const [snackCount, setSnackCount] = useState<number | null>(null);
+	const [isNavOpen, setIsNavOpen] = useState(false);
+	const headerRef = useRef<HTMLElement>(null);
 
 	useEffect(() => {
 		axios
@@ -39,28 +41,67 @@ function App() {
 			.catch(() => {});
 	}, []);
 
+	useEffect(() => {
+		if (!isNavOpen) return;
+
+		const closeOnOutsidePress = (event: PointerEvent) => {
+			if (!headerRef.current?.contains(event.target as Node)) {
+				setIsNavOpen(false);
+			}
+		};
+
+		document.addEventListener("pointerdown", closeOnOutsidePress);
+		return () => document.removeEventListener("pointerdown", closeOnOutsidePress);
+	}, [isNavOpen]);
+
 	const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 		`app-nav-link ${isActive ? "active" : ""}`;
 
 	return (
 		<div className="app-shell">
 			<Toaster position="top-center" />
-			<header className="app-header">
+			<header
+				ref={headerRef}
+				className="app-header"
+				onKeyDown={(event) => {
+					if (event.key === "Escape") setIsNavOpen(false);
+				}}
+			>
 				<div className="app-header-inner">
-					<NavLink to="/current-plan" className="app-brand">
+					<NavLink
+						to="/current-plan"
+						className="app-brand"
+						onClick={() => setIsNavOpen(false)}
+					>
 						<span className="app-brand-badge">
 							<i className="bi bi-egg-fried" aria-hidden="true" />
 						</span>
 						<span className="app-brand-name">Food Planner</span>
 					</NavLink>
 
-					<nav className="app-nav" aria-label="Main navigation">
+					<button
+						type="button"
+						className="app-nav-toggle"
+						aria-label={isNavOpen ? "Close navigation menu" : "Open navigation menu"}
+						aria-expanded={isNavOpen}
+						aria-controls="main-navigation"
+						onClick={() => setIsNavOpen((isOpen) => !isOpen)}
+					>
+						<i className={`bi ${isNavOpen ? "bi-x-lg" : "bi-list"}`} aria-hidden="true" />
+					</button>
+
+					<nav
+						id="main-navigation"
+						className={`app-nav ${isNavOpen ? "is-open" : ""}`}
+						aria-label="Main navigation"
+					>
 						{NAV_ITEMS.map((item) => (
 							<NavLink
 								key={item.to}
 								to={item.to}
 								end={item.end}
 								className={navLinkClass}
+								onClick={() => setIsNavOpen(false)}
 							>
 								<i className={`bi ${item.icon}`} aria-hidden="true" />
 								<span>{item.label}</span>
@@ -74,6 +115,7 @@ function App() {
 						className={({ isActive }) =>
 							`app-nav-link app-nav-settings ${isActive ? "active" : ""}`
 						}
+						onClick={() => setIsNavOpen(false)}
 					>
 						<i className="bi bi-gear" aria-hidden="true" />
 						<span className="visually-hidden">Settings</span>
